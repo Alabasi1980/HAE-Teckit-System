@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
 // Data Layer
-import { DataProvider } from './context/DataContext';
+import { DataProvider, useData } from './context/DataContext';
 
 // System-Based Architecture Imports
 import { Sidebar, Header } from './systems/app-shell';
@@ -20,17 +20,15 @@ import { LoginView, MfaVerification, authService } from './systems/auth';
 // Shared
 import { useEnjazCore } from './shared/hooks/useEnjazCore';
 import { WorkItem, Project, User } from './shared/types';
-import { usersRepo } from './shared/services/usersRepo';
-import { workItemsRepo } from './shared/services/workItemsRepo';
 
 type View = 'dashboard' | 'workitems' | 'approvals' | 'projects' | 'field-ops' | 'project-detail' | 'documents' | 'knowledge' | 'assets' | 'settings' | 'profile';
 type AuthState = 'LOGIN' | 'MFA' | 'AUTHENTICATED';
 
 function AppContent() {
+  const data = useData();
   const [authState, setAuthState] = useState<AuthState>('LOGIN');
   const [authUser, setAuthUser] = useState<User | null>(null);
 
-  // Core Data Hooks
   const { 
     workItems, projects, users, currentUser, notifications, isLoading: isDataLoading,
     handleStatusUpdate, handleSwitchUser, markAllNotifsRead, loadAllData 
@@ -48,9 +46,9 @@ function AppContent() {
     if (sessionUser) {
       setAuthUser(sessionUser);
       setAuthState('AUTHENTICATED');
-      usersRepo.setCurrentUser(sessionUser.id);
+      data.users.setCurrentUser(sessionUser.id);
     }
-  }, []);
+  }, [data]);
 
   const handleLoginSuccess = (user: User) => {
     setAuthUser(user);
@@ -60,7 +58,7 @@ function AppContent() {
   const handleMfaVerified = () => {
     if (authUser) {
       authService.createSession(authUser);
-      usersRepo.setCurrentUser(authUser.id);
+      data.users.setCurrentUser(authUser.id);
       setAuthState('AUTHENTICATED');
       loadAllData();
     }
@@ -73,7 +71,7 @@ function AppContent() {
   };
 
   const handleCreateWorkItem = async (newItem: Partial<WorkItem>) => {
-    await workItemsRepo.create(newItem);
+    await data.workItems.create(newItem);
     await loadAllData();
     setIsCreateModalOpen(false);
   };
@@ -132,7 +130,6 @@ function AppContent() {
         />
 
         <div className="flex-1 p-4 lg:p-6 overflow-y-auto no-scrollbar pb-24">
-          {/* Fix: Passing required props 'projects' and 'users' to Dashboard component */}
           {currentView === 'dashboard' && <Dashboard items={workItems} projects={projects} users={users} />}
           {currentView === 'workitems' && <WorkItemList items={workItems} onItemClick={setSelectedItem} />}
           {currentView === 'approvals' && <ApprovalsView items={workItems} currentUser={currentUser} onItemClick={setSelectedItem} />}

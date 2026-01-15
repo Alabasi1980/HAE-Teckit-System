@@ -7,12 +7,15 @@ const DataContext = createContext<IDataProvider | null>(null);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const provider = useMemo(() => {
+    // Determine data source from environment variables
+    // In many environments, import.meta.env is used instead of process.env
     const source = (import.meta as any).env?.VITE_DATA_SOURCE || 'local';
-    console.log(`[EnjazOne] Initializing Data Provider: ${source.toUpperCase()}`);
     
     if (source === 'api') {
       return new HttpApiProvider();
     }
+    
+    // Default to local storage provider
     return new LocalStorageProvider();
   }, []);
 

@@ -1,4 +1,3 @@
-
 import { IDataProvider, IWorkItemRepository } from '../../contracts';
 import { WorkItemMapper, WorkItemDTO } from '../../mappers/WorkItemMapper';
 import { WorkItem, Status } from '../../../shared/types';
@@ -22,7 +21,6 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}${endpoint}`, { ...options, headers });
       if (!response.ok) {
         if (response.status === 401) {
-          // Trigger logout or refresh
           console.error("Unauthorized request");
         }
         throw new Error(`API Error: ${response.statusText}`);
@@ -85,17 +83,19 @@ export class HttpApiProvider implements IDataProvider {
   private client = new ApiClient();
   workItems = new WorkItemHttpRepo(this.client);
 
-  // Other repos would be implemented similarly
   get projects(): any { return { getAll: () => this.client.get('/projects') }; }
   get users(): any { return { 
     getAll: () => this.client.get('/users'),
     getCurrentUser: () => this.client.get('/users/me'),
     setCurrentUser: (id: string) => this.client.post('/users/session', { id })
   }; }
-  get assets(): any { return {}; }
-  get documents(): any { return {}; }
-  get knowledge(): any { return {}; }
+  get assets(): any { return { getAll: () => Promise.resolve([]) }; }
+  get documents(): any { return { getAll: () => Promise.resolve([]) }; }
+  get knowledge(): any { return { getAll: () => Promise.resolve([]) }; }
   get notifications(): any { return { getForUser: (id: string) => this.client.get(`/notifications/${id}`) }; }
   get fieldOps(): any { return { getDrafts: () => [], saveDraft: () => [], removeDraft: () => [], clearDrafts: () => {} }; }
-  get ai(): any { return {}; }
+  get ai(): any { return { 
+    analyzeWorkItem: () => Promise.resolve("AI stub"),
+    generateExecutiveBrief: () => Promise.resolve("Brief stub")
+  }; }
 }
