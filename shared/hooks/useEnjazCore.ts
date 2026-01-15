@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useData } from '../../context/DataContext';
 import { WorkItem, Project, User, Notification, Status } from '../types';
@@ -37,7 +36,7 @@ export const useEnjazCore = () => {
       }
     } catch (err: any) {
       console.error("Critical: Data Load Failed", err);
-      setError("فشل في مزامنة البيانات مع الخادم. يرجى التحقق من الاتصال.");
+      setError("فشل في مزامنة البيانات. يرجى التحقق من الاتصال.");
     } finally {
       setIsLoading(false);
     }
@@ -55,10 +54,9 @@ export const useEnjazCore = () => {
 
     try {
       await data.workItems.updateStatus(id, newStatus);
-      data.invalidateCache(); 
     } catch (err: any) {
       setWorkItems(previousWorkItems.current);
-      setError("فشل تحديث الحالة. تأكد من صلاحياتك واتصالك بالشبكة.");
+      setError("فشل تحديث الحالة.");
     }
   };
 
@@ -67,7 +65,6 @@ export const useEnjazCore = () => {
       const newUser = await data.users.setCurrentUser(userId);
       if (newUser) {
         setCurrentUser(newUser);
-        data.invalidateCache();
         await loadAllData(true);
       }
     } catch (err) {
@@ -81,7 +78,7 @@ export const useEnjazCore = () => {
       try {
         await data.notifications.markAllAsRead(currentUser.id);
       } catch (err) {
-        // Silent fail for non-critical action
+        // Silent fail
       }
     }
   };

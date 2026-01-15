@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Project, Document } from '../../../shared/types';
-import { documentsRepo } from '../../../shared/services/documentsRepo';
-import { usersRepo } from '../../../shared/services/usersRepo';
+import { useData } from '../../../context/DataContext';
 import { MapPin, FileText, Upload, Trash2, File, Download } from 'lucide-react';
 
 interface ProjectDocumentsProps {
@@ -9,6 +8,7 @@ interface ProjectDocumentsProps {
 }
 
 const ProjectDocuments: React.FC<ProjectDocumentsProps> = ({ project }) => {
+  const data = useData();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadCategory, setUploadCategory] = useState<Document['category']>('Other');
@@ -18,7 +18,7 @@ const ProjectDocuments: React.FC<ProjectDocumentsProps> = ({ project }) => {
   }, [project.id]);
 
   const loadDocuments = async () => {
-    const docs = await documentsRepo.getByProjectId(project.id);
+    const docs = await data.documents.getByProjectId(project.id);
     setDocuments(docs);
   };
 
@@ -26,12 +26,12 @@ const ProjectDocuments: React.FC<ProjectDocumentsProps> = ({ project }) => {
     if (e.target.files && e.target.files[0]) {
       setIsUploading(true);
       const file = e.target.files[0];
-      const currentUser = await usersRepo.getCurrentUser();
+      const currentUser = await data.users.getCurrentUser();
       
       try {
         const url = URL.createObjectURL(file);
         
-        await documentsRepo.upload({
+        await data.documents.upload({
            title: file.name,
            projectId: project.id,
            url: url,
@@ -53,7 +53,7 @@ const ProjectDocuments: React.FC<ProjectDocumentsProps> = ({ project }) => {
 
   const handleDeleteDocument = async (id: string) => {
     if (window.confirm("Are you sure?")) {
-      await documentsRepo.delete(id);
+      await data.documents.delete(id);
       await loadDocuments();
     }
   };

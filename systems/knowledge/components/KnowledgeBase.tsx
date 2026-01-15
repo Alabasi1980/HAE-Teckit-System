@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Article } from '../../../shared/types';
-import { knowledgeRepo } from '../../../shared/services/knowledgeRepo';
-import { Search, BookOpen, ChevronRight, X, Hash, Clock, Share2, Bookmark, Sparkles, ShieldCheck, HeartPulse, Hammer, Monitor, Info, Loader2, Send, AlertCircle, Bot } from 'lucide-react';
+import { useData } from '../../../context/DataContext';
+import { Search, BookOpen, ChevronRight, X, Hash, Clock, Share2, Bookmark, Sparkles, ShieldCheck, HeartPulse, Hammer, Monitor, Info, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import AiWikiAssistant from './AiWikiAssistant';
 
 const KnowledgeBase: React.FC = () => {
+  const data = useData();
   const [articles, setArticles] = useState<Article[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -18,9 +19,12 @@ const KnowledgeBase: React.FC = () => {
 
   const loadArticles = async () => {
     setIsLoading(true);
-    const data = await knowledgeRepo.getAll();
-    setArticles(data);
-    setIsLoading(false);
+    try {
+      const result = await data.knowledge.getAll();
+      setArticles(result);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const categories = [
@@ -185,10 +189,6 @@ const KnowledgeBase: React.FC = () => {
                     <div className="h-6 w-px bg-slate-200"></div>
                     <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{readingArticle.category} Archive</span>
                  </div>
-                 <div className="flex items-center gap-3">
-                    <button className="p-3 bg-slate-50 text-slate-500 rounded-2xl hover:bg-blue-50 hover:text-blue-600 transition-all"><Share2 size={18} /></button>
-                    <button className="p-3 bg-slate-50 text-slate-500 rounded-2xl hover:bg-amber-50 hover:text-amber-600 transition-all"><Bookmark size={18} /></button>
-                 </div>
               </div>
 
               <div className="px-10 py-12 max-w-3xl mx-auto">
@@ -212,18 +212,6 @@ const KnowledgeBase: React.FC = () => {
 
                  <div className="prose prose-slate lg:prose-xl max-w-none prose-headings:font-black prose-p:font-bold prose-p:text-slate-600 prose-p:leading-relaxed">
                     <ReactMarkdown>{readingArticle.content}</ReactMarkdown>
-                 </div>
-
-                 <div className="mt-20 pt-10 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-3">
-                       <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl"><Sparkles size={20} /></div>
-                       <p className="text-xs font-black text-slate-500">Suggested improvements or corrections? <span className="text-blue-600 hover:underline cursor-pointer">Contact Author</span></p>
-                    </div>
-                    <div className="flex gap-2">
-                       {readingArticle.tags.map(t => (
-                         <span key={t} className="px-4 py-2 bg-slate-50 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest">#{t}</span>
-                       ))}
-                    </div>
                  </div>
               </div>
            </div>

@@ -1,5 +1,4 @@
-
-import { WorkItem, Project, User, Asset, Document, Article, Status, ApprovalDecision, Comment, Notification } from '../shared/types';
+import { WorkItem, Project, User, Asset, Document, Article, Status, ApprovalDecision, Comment, Notification, NotificationPreferences, AutomationRule } from '../shared/types';
 
 export interface IWorkItemRepository {
   getAll(forceRefresh?: boolean): Promise<WorkItem[]>;
@@ -50,6 +49,13 @@ export interface INotificationRepository {
   create(notification: Partial<Notification>): Promise<Notification>;
   markAsRead(id: string): Promise<void>;
   markAllAsRead(userId: string): Promise<void>;
+  getPreferences(): NotificationPreferences;
+  savePreferences(prefs: NotificationPreferences): void;
+}
+
+export interface IAutomationRepository {
+  getRules(): AutomationRule[];
+  toggleRule(id: string): AutomationRule[];
 }
 
 export interface IFieldOpsRepository {
@@ -75,6 +81,7 @@ export interface IDataProvider {
   documents: IDocumentRepository;
   knowledge: IKnowledgeRepository;
   notifications: INotificationRepository;
+  automation: IAutomationRepository;
   fieldOps: IFieldOpsRepository;
   ai: IAiService;
   invalidateCache(): void;

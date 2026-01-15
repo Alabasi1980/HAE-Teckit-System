@@ -25,7 +25,7 @@ type View = 'dashboard' | 'workitems' | 'approvals' | 'projects' | 'field-ops' |
 type AuthState = 'LOGIN' | 'MFA' | 'AUTHENTICATED';
 
 function AppContent() {
-  const data = useData(); // Unified Data Source
+  const data = useData(); 
   const [authState, setAuthState] = useState<AuthState>('LOGIN');
   const [authUser, setAuthUser] = useState<User | null>(null);
 
@@ -48,7 +48,7 @@ function AppContent() {
       setAuthState('AUTHENTICATED');
       data.users.setCurrentUser(sessionUser.id);
     }
-  }, [data]);
+  }, [data.users]);
 
   const handleLoginSuccess = (user: User) => {
     setAuthUser(user);
@@ -102,7 +102,6 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900 overflow-hidden relative">
-      {/* Error Toast */}
       {error && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[200] w-full max-w-md animate-slide-in-down px-4" dir="rtl">
            <div className="bg-rose-600 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-4 border border-rose-500">
@@ -147,7 +146,6 @@ function AppContent() {
         />
 
         <div className="flex-1 p-4 lg:p-6 overflow-y-auto no-scrollbar pb-24">
-          {/* Fix: Added missing projects and users props to Dashboard component to satisfy type requirements */}
           {currentView === 'dashboard' && <Dashboard items={workItems} projects={projects} users={users} />}
           {currentView === 'workitems' && <WorkItemList items={workItems} onItemClick={setSelectedItem} />}
           {currentView === 'approvals' && <ApprovalsView items={workItems} currentUser={currentUser} onItemClick={setSelectedItem} />}

@@ -1,162 +1,201 @@
+import { IDataProvider, IWorkItemRepository, IProjectRepository, IUserRepository, IAssetRepository, IDocumentRepository, IKnowledgeRepository, INotificationRepository, IFieldOpsRepository, IAiService, IAutomationRepository } from '../../contracts';
+import { WorkItem, Status, Notification, NotificationPreferences, AutomationRule, Priority, WorkItemType, ApprovalDecision } from '../../../shared/types';
+import { MOCK_WORK_ITEMS, MOCK_PROJECTS, MOCK_USERS, MOCK_ASSETS, MOCK_ARTICLES } from '../../../shared/constants';
 
-import { IDataProvider, IWorkItemRepository, IProjectRepository, IUserRepository, IAssetRepository, IDocumentRepository, IKnowledgeRepository, INotificationRepository, IFieldOpsRepository, IAiService } from '../../contracts';
-import { workItemsRepo } from '../../../shared/services/workItemsRepo';
-import { projectsRepo } from '../../../shared/services/projectsRepo';
-import { usersRepo } from '../../../shared/services/usersRepo';
-import { assetsRepo } from '../../../shared/services/assetsRepo';
-import { documentsRepo } from '../../../shared/services/documentsRepo';
-import { knowledgeRepo } from '../../../shared/services/knowledgeRepo';
-import { notificationsRepo } from '../../../shared/services/notificationsRepo';
-import { WorkItem, Project, User } from '../../../shared/types';
-import { GoogleGenAI } from "@google/genai";
+// --- internal Local DB Engine ---
+const DB = {
+  get: <T>(key: string, init: T[]): T[] => {
+    const d = localStorage.getItem(`enjaz_v2_${key}`);
+    return d ? JSON.parse(d) : init;
+  },
+  save: (key: string, data: any) => localStorage.setItem(`enjaz_v2_${key}`, JSON.stringify(data))
+};
 
-class CacheManager {
-  private cache = new Map<string, { data: any, timestamp: number }>();
-  private TTL = 30000; // 30 seconds
-
-  set(key: string, data: any) {
-    this.cache.set(key, { data, timestamp: Date.now() });
-  }
-
-  get(key: string) {
-    const entry = this.cache.get(key);
-    if (!entry) return null;
-    if (Date.now() - entry.timestamp > this.TTL) {
-      this.cache.delete(key);
-      return null;
-    }
-    return entry.data;
-  }
-
-  clear() {
-    this.cache.clear();
-  }
-}
-
-class AiServiceManager implements IAiService {
-  private getClient() {
-    return new GoogleGenAI({ apiKey: process.env.API_KEY });
-  }
-
-  async analyzeWorkItem(item: WorkItem): Promise<string> {
-    const ai = this.getClient();
-    const prompt = `حلل المهمة الإنشائية التالية: ${item.title}. الوصف: ${item.description}. قدم تقييم مخاطر و3 خطوات للحل بالعربية المهنية.`;
-    try {
-      const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
-      return result.text || "لم يتمكن النظام من التحليل.";
-    } catch (e) {
-      return "**[وضع المحاكاة]** المهمة تبدو ضمن النطاق الطبيعي ولكن تتطلب مراقبة جودة مكثفة.";
-    }
-  }
-
-  async suggestPriority(title: string, description: string): Promise<string> {
-    return "Medium";
-  }
-
-  async generateExecutiveBrief(stats: any): Promise<string> {
-    const ai = this.getClient();
-    const prompt = `أنت مستشار إدارة مشاريع. قدم ملخصاً تنفيذياً بالعربية بناءً على الأرقام: ${JSON.stringify(stats)}`;
-    try {
-      const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
-      return result.text || "الملخص غير متاح حالياً.";
-    } catch (e) {
-      return "الأداء العام للمشروع مستقر مع وجود ملاحظات طفيفة على الجدول الزمني.";
-    }
-  }
-
-  async analyzeNotification(title: string, message: string): Promise<any> {
-    return { priority: 'normal', category: 'system' };
-  }
-
-  async askWiki(context: string, query: string): Promise<string> {
-    const ai = this.getClient();
-    const prompt = `استخدم قاعدة المعرفة التالية للإجابة على سؤال الموظف: \n${context}\n السؤال: ${query}\n أجب بالعربية المهنية.`;
-    try {
-      const result = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
-      return result.text || "عذراً، لم أجد إجابة دقيقة في قاعدة المعرفة.";
-    } catch (e) {
-      return "بناءً على السياسات العامة، يرجى مراجعة مدير القسم المعني للحصول على أدق المعلومات.";
-    }
-  }
-}
-
-const DRAFTS_KEY = 'enjaz_field_drafts';
-class FieldOpsLocalRepo implements IFieldOpsRepository {
-  getDrafts(): Partial<WorkItem>[] {
-    const data = localStorage.getItem(DRAFTS_KEY);
-    return data ? JSON.parse(data) : [];
-  }
-  saveDraft(item: Partial<WorkItem>): Partial<WorkItem>[] {
-    const drafts = this.getDrafts();
-    drafts.unshift({ ...item, id: `draft-${Date.now()}` });
-    localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
-    return drafts;
-  }
-  removeDraft(id: string): Partial<WorkItem>[] {
-    const drafts = this.getDrafts().filter(d => d.id !== id);
-    localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
-    return drafts;
-  }
-  clearDrafts(): void {
-    localStorage.removeItem(DRAFTS_KEY);
-  }
+class LocalAiService implements IAiService {
+  async analyzeWorkItem(item: WorkItem) { return `**[تحليل محاكي]** المهمة "${item.title}" تبدو مستقرة.`; }
+  async suggestPriority() { return "Medium"; }
+  async generateExecutiveBrief() { return "## ملخص الأداء المحلي\nجميع المشاريع تعمل بكفاءة."; }
+  async analyzeNotification() { return { priority: 'normal', category: 'system' }; }
+  async askWiki() { return "أنا المساعد الذكي المحلي. يرجى تفعيل وضع API للحصول على نتائج حقيقية."; }
 }
 
 export class LocalStorageProvider implements IDataProvider {
-  private cache = new CacheManager();
+  private cache = new Map<string, any>();
+  ai = new LocalAiService();
+
+  invalidateCache() { this.cache.clear(); }
 
   workItems: IWorkItemRepository = {
-    ...workItemsRepo,
-    getAll: async (forceRefresh = false) => {
-      const cached = this.cache.get('workItems');
-      if (cached && !forceRefresh) return cached;
-      const data = await workItemsRepo.getAll();
-      this.cache.set('workItems', data);
+    getAll: async (force) => {
+      if (!force && this.cache.has('wi')) return this.cache.get('wi');
+      const data = DB.get('work_items', MOCK_WORK_ITEMS);
+      this.cache.set('wi', data);
       return data;
     },
-    updateStatus: async (id, status) => {
-      const result = await workItemsRepo.updateStatus(id, status);
-      this.cache.clear(); // Invalidate on write
-      return result;
+    getById: async (id) => (await this.workItems.getAll()).find(i => i.id === id),
+    create: async (item) => {
+      const all = await this.workItems.getAll(true);
+      const newItem = { ...item, id: `WI-${Date.now()}`, createdAt: new Date().toISOString(), status: Status.OPEN, comments: [], tags: item.tags || [] } as WorkItem;
+      const updated = [newItem, ...all];
+      DB.save('work_items', updated);
+      this.invalidateCache();
+      return newItem;
+    },
+    update: async (id, updates) => {
+      const all = await this.workItems.getAll(true);
+      const idx = all.findIndex(i => i.id === id);
+      if (idx === -1) return null;
+      all[idx] = { ...all[idx], ...updates };
+      DB.save('work_items', all);
+      this.invalidateCache();
+      return all[idx];
+    },
+    updateStatus: async (id, status) => this.workItems.update(id, { status }),
+    addComment: async (id, comment) => {
+      const item = await this.workItems.getById(id);
+      if (!item) return null;
+      return this.workItems.update(id, { comments: [...item.comments, comment] });
+    },
+    submitApprovalDecision: async (id, stepId, decision, comments) => {
+      const item = await this.workItems.getById(id);
+      if (!item || !item.approvalChain) return null;
+      const chain = item.approvalChain.map(s => s.id === stepId ? { ...s, decision, comments, decisionDate: new Date().toISOString() } : s);
+      let status = item.status;
+      if (chain.some(s => s.decision === ApprovalDecision.REJECTED)) status = Status.REJECTED;
+      else if (chain.every(s => s.decision === ApprovalDecision.APPROVED)) status = Status.APPROVED;
+      return this.workItems.update(id, { approvalChain: chain, status });
     }
   };
 
   projects: IProjectRepository = {
-    ...projectsRepo,
-    getAll: async (forceRefresh = false) => {
-      const cached = this.cache.get('projects');
-      if (cached && !forceRefresh) return cached;
-      const data = await projectsRepo.getAll();
-      this.cache.set('projects', data);
+    getAll: async (force) => {
+      if (!force && this.cache.has('pj')) return this.cache.get('pj');
+      const data = DB.get('projects', MOCK_PROJECTS);
+      this.cache.set('pj', data);
       return data;
+    },
+    getById: async (id) => (await this.projects.getAll()).find(p => p.id === id),
+    update: async (id, updates) => {
+      const all = await this.projects.getAll(true);
+      const idx = all.findIndex(p => p.id === id);
+      if (idx === -1) return null;
+      all[idx] = { ...all[idx], ...updates };
+      DB.save('projects', all);
+      this.invalidateCache();
+      return all[idx];
     }
   };
 
   users: IUserRepository = {
-    ...usersRepo,
-    getAll: async (forceRefresh = false) => {
-      const cached = this.cache.get('users');
-      if (cached && !forceRefresh) return cached;
-      const data = await usersRepo.getAll();
-      this.cache.set('users', data);
-      return data;
+    getAll: async () => DB.get('users', MOCK_USERS),
+    getCurrentUser: async () => {
+      const id = localStorage.getItem('enjaz_user_session_id');
+      const all = await this.users.getAll();
+      return all.find(u => u.id === id) || all[0];
     },
-    getCurrentUser: usersRepo.getCurrentUser,
     setCurrentUser: async (id) => {
-      const user = await usersRepo.setCurrentUser(id);
-      this.cache.clear();
+      const all = await this.users.getAll();
+      const user = all.find(u => u.id === id);
+      if (user) localStorage.setItem('enjaz_user_session_id', user.id);
       return user;
     }
   };
 
-  assets: IAssetRepository = assetsRepo;
-  documents: IDocumentRepository = documentsRepo;
-  knowledge: IKnowledgeRepository = knowledgeRepo;
-  notifications: INotificationRepository = notificationsRepo;
-  fieldOps: IFieldOpsRepository = new FieldOpsLocalRepo();
-  ai: IAiService = new AiServiceManager();
+  notifications: INotificationRepository = {
+    getAll: async () => DB.get('notifs', []),
+    getForUser: async (uid) => (await this.notifications.getAll()).filter(n => n.userId === uid).sort((a,b) => b.createdAt.localeCompare(a.createdAt)),
+    getUnreadCount: async (uid) => (await this.notifications.getForUser(uid)).filter(n => !n.isRead).length,
+    create: async (n) => {
+      const all = await this.notifications.getAll();
+      const newItem = { ...n, id: `N-${Date.now()}`, isRead: false, createdAt: new Date().toISOString() } as Notification;
+      DB.save('notifs', [newItem, ...all]);
+      return newItem;
+    },
+    markAsRead: async (id) => {
+      const all = await this.notifications.getAll();
+      DB.save('notifs', all.map(n => n.id === id ? { ...n, isRead: true } : n));
+    },
+    markAllAsRead: async (uid) => {
+      const all = await this.notifications.getAll();
+      DB.save('notifs', all.map(n => n.userId === uid ? { ...n, isRead: true } : n));
+    },
+    getPreferences: () => DB.get('notif_prefs', [{
+      userId: 'default', dndEnabled: false, channels: {
+        critical: { email: true, inApp: true, push: true },
+        mentions: { email: true, inApp: true, push: true },
+        updates: { email: false, inApp: true, push: false }
+      }
+    } as any])[0],
+    savePreferences: (p) => DB.save('notif_prefs', [p])
+  };
 
-  invalidateCache() {
-    this.cache.clear();
-  }
+  automation: IAutomationRepository = {
+    getRules: () => DB.get('rules', [
+      { id: 'r1', name: 'أتمتة السلامة', description: 'توجيه بلاغات الحوادث فوراً لمشرف الموقع.', isEnabled: true, trigger: 'On Create' },
+      { id: 'r2', name: 'اتفاقية الحالة الحرجة', description: 'ضبط الاستحقاق لـ 24 ساعة للمهام الحرجة.', isEnabled: true, trigger: 'On Create' }
+    ]),
+    toggleRule: (id) => {
+      const rules = this.automation.getRules();
+      const updated = rules.map(r => r.id === id ? { ...r, isEnabled: !r.isEnabled } : r);
+      DB.save('rules', updated);
+      return updated;
+    }
+  };
+
+  assets: IAssetRepository = {
+    getAll: async () => DB.get('assets', MOCK_ASSETS),
+    getById: async (id) => (await this.assets.getAll()).find(a => a.id === id),
+    update: async (id, updates) => {
+      const all = await this.assets.getAll();
+      const idx = all.findIndex(a => a.id === id);
+      if (idx === -1) return null;
+      all[idx] = { ...all[idx], ...updates };
+      DB.save('assets', all);
+      return all[idx];
+    },
+    create: async (a) => {
+      const all = await this.assets.getAll();
+      const newItem = { ...a, id: `AST-${Date.now()}` } as any;
+      DB.save('assets', [newItem, ...all]);
+      return newItem;
+    }
+  };
+
+  documents: IDocumentRepository = {
+    getAll: async () => DB.get('docs', []),
+    getByProjectId: async (pid) => (await this.documents.getAll()).filter(d => d.projectId === pid),
+    upload: async (d) => {
+      const all = await this.documents.getAll();
+      const newItem = { ...d, id: `DOC-${Date.now()}`, uploadedAt: new Date().toISOString() } as any;
+      DB.save('docs', [newItem, ...all]);
+      return newItem;
+    },
+    delete: async (id) => DB.save('docs', (await this.documents.getAll()).filter(d => d.id !== id))
+  };
+
+  knowledge: IKnowledgeRepository = {
+    getAll: async () => DB.get('kb', MOCK_ARTICLES),
+    search: async (q) => (await this.knowledge.getAll()).filter(a => a.title.includes(q)),
+    create: async (a) => {
+      const all = await this.knowledge.getAll();
+      const newItem = { ...a, id: `KB-${Date.now()}`, lastUpdated: new Date().toISOString() } as any;
+      DB.save('kb', [newItem, ...all]);
+      return newItem;
+    }
+  };
+
+  fieldOps: IFieldOpsRepository = {
+    getDrafts: () => DB.get('field_drafts', []),
+    saveDraft: (i) => {
+      const d = [...this.fieldOps.getDrafts(), { ...i, id: `draft-${Date.now()}` }];
+      DB.save('field_drafts', d);
+      return d;
+    },
+    removeDraft: (id) => {
+      const d = this.fieldOps.getDrafts().filter(x => x.id !== id);
+      DB.save('field_drafts', d);
+      return d;
+    },
+    clearDrafts: () => DB.save('field_drafts', [])
+  };
 }

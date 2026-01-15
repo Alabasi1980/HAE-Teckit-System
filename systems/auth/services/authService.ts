@@ -1,17 +1,26 @@
-
 import { User } from '../../../shared/types';
-import { usersRepo } from '../../../shared/services/usersRepo';
+import { MOCK_USERS } from '../../../shared/constants';
+
+/**
+ * @file authService.ts
+ * @description محرك المصادقة. تم تحديثه ليعمل بشكل متوافق مع نظام الـ Providers الجديد.
+ */
+
+const getStoredUsers = (): User[] => {
+  const d = localStorage.getItem('enjaz_v2_users');
+  return d ? JSON.parse(d) : MOCK_USERS;
+};
 
 export const authService = {
   login: async (email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
-    // Simulate API delay
+    // محاكاة تأخير الشبكة
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    const users = await usersRepo.getAll();
+    const users = getStoredUsers();
     const user = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
     if (user) {
-      // Mock password check - in real app, hash checking happens server-side
+      // فحص كلمة المرور - تجريبي فقط
       if (password === '123456') { 
         return { success: true, user };
       }
@@ -22,10 +31,10 @@ export const authService = {
   },
 
   sendMfaCode: async (email: string): Promise<string> => {
-    // Simulate sending email
     await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log(`[MFA System] Code sent to ${email}: 592834`);
-    return '592834'; // Mock code for demo
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log(`[MFA] Code for ${email}: ${code}`);
+    return code;
   },
 
   verifyMfa: async (inputCode: string, actualCode: string): Promise<boolean> => {
