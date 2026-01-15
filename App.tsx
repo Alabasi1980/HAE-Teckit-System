@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
@@ -80,7 +81,13 @@ function App() {
         />
 
         <div className="flex-1 p-4 lg:p-8 overflow-y-auto no-scrollbar pb-20">
-          {currentView === 'dashboard' && <Dashboard items={workItems} />}
+          {currentView === 'dashboard' && (
+            <Dashboard 
+              items={workItems} 
+              projects={projects} 
+              users={users} 
+            />
+          )}
           {currentView === 'workitems' && <WorkItemList items={workItems} onItemClick={setSelectedItem} />}
           {currentView === 'approvals' && <ApprovalsView items={workItems} currentUser={currentUser} onItemClick={setSelectedItem} />}
           {currentView === 'projects' && (
