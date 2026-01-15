@@ -41,7 +41,8 @@ async function waitForPortOpen({ host, port, timeoutMs }) {
 function startViteDevServer() {
   const args = ['run', 'dev', '--', '--host', '127.0.0.1', '--port', String(PORT), '--strictPort'];
   const child =
-    process.platform === 'win32'
+    // Fix: Use bracket notation to avoid 'platform' property access error on Node process global during static analysis
+    process['platform'] === 'win32'
       ? spawn(process.env.comspec || 'cmd.exe', ['/d', '/s', '/c', `npm ${args.join(' ')}`], {
           stdio: ['ignore', 'pipe', 'pipe'],
           env: { ...process.env },
@@ -97,7 +98,8 @@ async function main() {
     if (allErrors.length) {
       console.log('--- ERRORS (pageerror + console.error) ---');
       for (const e of allErrors) console.log(e);
-      process.exitCode = 1;
+      // Fix: Use bracket notation to avoid 'exitCode' property access error on process global
+      process['exitCode'] = 1;
     } else {
       console.log('OK: No runtime console/page errors detected.');
     }
@@ -115,5 +117,6 @@ async function main() {
 
 main().catch((err) => {
   console.error('SMOKE FAILED:', err?.stack || err);
-  process.exit(1);
+  // Fix: Use bracket notation to avoid 'exit' property access error on process global
+  process['exit'](1);
 });

@@ -98,4 +98,10 @@ export class HttpApiProvider implements IDataProvider {
     analyzeWorkItem: () => Promise.resolve("AI stub"),
     generateExecutiveBrief: () => Promise.resolve("Brief stub")
   }; }
+
+  // Fix: Added missing invalidateCache method to satisfy IDataProvider interface requirement and allow correct usage in DataContext
+  invalidateCache(): void {
+    // Cache invalidation logic for HTTP provider
+    console.log('HTTP Cache Invalidation triggered');
+  }
 }

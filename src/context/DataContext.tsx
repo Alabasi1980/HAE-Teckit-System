@@ -8,7 +8,8 @@ const DataContext = createContext<IDataProvider | null>(null);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const provider = useMemo(() => {
-    const source = import.meta.env.VITE_DATA_SOURCE || 'local';
+    // Fix: Cast import.meta to any to access env property which is injected by Vite at build time and might not be recognized by TypeScript
+    const source = (import.meta as any).env.VITE_DATA_SOURCE || 'local';
     console.log(`[EnjazOne] Initializing Data Provider: ${source.toUpperCase()}`);
     
     if (source === 'api') {

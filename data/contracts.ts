@@ -1,7 +1,8 @@
+
 import { WorkItem, Project, User, Asset, Document, Article, Status, ApprovalDecision, Comment, Notification } from '../shared/types';
 
 export interface IWorkItemRepository {
-  getAll(): Promise<WorkItem[]>;
+  getAll(forceRefresh?: boolean): Promise<WorkItem[]>;
   getById(id: string): Promise<WorkItem | undefined>;
   create(item: Partial<WorkItem>): Promise<WorkItem>;
   update(id: string, updates: Partial<WorkItem>): Promise<WorkItem | null>;
@@ -11,13 +12,13 @@ export interface IWorkItemRepository {
 }
 
 export interface IProjectRepository {
-  getAll(): Promise<Project[]>;
+  getAll(forceRefresh?: boolean): Promise<Project[]>;
   getById(id: string): Promise<Project | undefined>;
   update(id: string, updates: Partial<Project>): Promise<Project | null>;
 }
 
 export interface IUserRepository {
-  getAll(): Promise<User[]>;
+  getAll(forceRefresh?: boolean): Promise<User[]>;
   getCurrentUser(): Promise<User>;
   setCurrentUser(userId: string): Promise<User | undefined>;
 }
@@ -76,4 +77,5 @@ export interface IDataProvider {
   notifications: INotificationRepository;
   fieldOps: IFieldOpsRepository;
   ai: IAiService;
+  invalidateCache(): void;
 }

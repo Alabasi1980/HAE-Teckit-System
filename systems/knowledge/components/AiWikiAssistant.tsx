@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { GoogleGenAI } from "@google/genai";
 import { Article } from '../../../shared/types';
+import { useData } from '../../../context/DataContext';
 import { Sparkles, Send, X, Bot, BookOpen, AlertCircle, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
@@ -9,6 +9,7 @@ interface AiWikiAssistantProps {
 }
 
 const AiWikiAssistant: React.FC<AiWikiAssistantProps> = ({ articles }) => {
+  const data = useData();
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,27 +22,11 @@ const AiWikiAssistant: React.FC<AiWikiAssistantProps> = ({ articles }) => {
     setIsLoading(true);
     setResponse(null);
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
     const context = articles.map(a => `Title: ${a.title}\nContent: ${a.content}`).join('\n\n---\n\n');
-    
-    const prompt = `You are Enjaz AI, the intelligent assistant for Enjaz One construction platform.
-    Use the following internal Knowledge Base articles to answer the user's question accurately.
-    
-    Knowledge Base:
-    ${context}
-    
-    Question: ${query}
-    
-    If the answer is not in the knowledge base, state that you don't have this information internally but provide a general professional advice based on international construction standards.
-    Answer in professional Arabic language. Use Markdown for formatting.`;
 
     try {
-      const result = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-      });
-      setResponse(result.text || "عذراً، لم أتمكن من استخراج إجابة.");
+      const result = await data.ai.askWiki(context, query);
+      setResponse(result);
     } catch (error) {
       setResponse("حدث خطأ أثناء الاتصال بمركز المعلومات الذكي.");
     } finally {

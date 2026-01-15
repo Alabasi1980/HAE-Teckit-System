@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useData } from '../../context/DataContext';
 import { WorkItem, Project, User, Notification, Status } from '../types';
 
@@ -12,12 +13,15 @@ export const useEnjazCore = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadAllData = useCallback(async () => {
+  // Reference for rollback if needed
+  const previousWorkItems = useRef<WorkItem[]>([]);
+
+  const loadAllData = useCallback(async (forceRefresh = false) => {
     try {
       const [items, projs, usrs, currUser] = await Promise.all([
-        data.workItems.getAll(),
-        data.projects.getAll(),
-        data.users.getAll(),
+        data.workItems.getAll(forceRefresh),
+        data.projects.getAll(forceRefresh),
+        data.users.getAll(forceRefresh),
         data.users.getCurrentUser()
       ]);
       
@@ -45,25 +49,42 @@ export const useEnjazCore = () => {
        }
     }, 30000);
     return () => clearInterval(interval);
-  }, [currentUser, loadAllData, data]);
+  }, [currentUser, loadAllData]);
 
   const handleStatusUpdate = async (id: string, newStatus: Status) => {
-    await data.workItems.updateStatus(id, newStatus);
-    await loadAllData();
+    // 1. Optimistic Update (Immediate Feedback)
+    previousWorkItems.current = [...workItems];
+    setWorkItems(prev => prev.map(item => 
+      item.id === id ? { ...item, status: newStatus } : item
+    ));
+
+    try {
+      // 2. Real API Call
+      await data.workItems.updateStatus(id, newStatus);
+      // Optional: Refresh cache background
+      data.invalidateCache(); 
+    } catch (error) {
+      // 3. Rollback on Failure
+      setWorkItems(previousWorkItems.current);
+      console.error("Failed to update status, rolling back UI", error);
+      alert("عذراً، فشل تحديث الحالة. يرجى المحاولة لاحقاً.");
+    }
   };
 
   const handleSwitchUser = async (userId: string) => {
     const newUser = await data.users.setCurrentUser(userId);
     if (newUser) {
       setCurrentUser(newUser);
-      await loadAllData();
+      data.invalidateCache();
+      await loadAllData(true);
     }
   };
 
   const markAllNotifsRead = async () => {
     if (currentUser) {
+      // Optimistic read
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       await data.notifications.markAllAsRead(currentUser.id);
-      await loadAllData();
     }
   };
 
