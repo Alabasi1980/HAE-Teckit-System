@@ -1,3 +1,4 @@
+
 import { AutomationRule, WorkItem, WorkItemType, Priority } from "../types";
 
 const DEFAULT_RULES: AutomationRule[] = [
