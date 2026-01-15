@@ -1,16 +1,17 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Document, Project } from '../../../shared/types';
-import { documentsRepo } from '../../../shared/services/documentsRepo';
-import { GoogleGenAI } from "@google/genai";
-import DocumentCard from './DocumentCard';
-import { Search, FolderOpen, Grid, List, Sparkles, X, Loader2, Database, ShieldCheck, FileText, AlertCircle } from 'lucide-react';
+import { useData } from '../../../context/DataContext';
+import { Search, Filter, FolderOpen, Grid, List, Sparkles, X, Loader2, Database, ShieldCheck, FileText, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import DocumentCard from './DocumentCard';
 
 interface DocumentsViewProps {
   projects: Project[];
 }
 
 const DocumentsView: React.FC<DocumentsViewProps> = ({ projects }) => {
+  const data = useData();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,14 +28,14 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({ projects }) => {
 
   const loadDocuments = async () => {
     setLoading(true);
-    const docs = await documentsRepo.getAll();
+    const docs = await data.documents.getAll();
     setDocuments(docs);
     setLoading(false);
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this archive?")) {
-      await documentsRepo.delete(id);
+      await data.documents.delete(id);
       loadDocuments();
     }
   };
@@ -43,32 +44,11 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({ projects }) => {
     setIsAiLoading(true);
     setAiSummary({ title: doc.title, content: '' });
     
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `You are a professional construction project assistant. 
-    Analyze the document metadata: 
-    Title: ${doc.title}
-    Category: ${doc.category}
-    Project Context: ${projects.find(p => p.id === doc.projectId)?.name || 'General'}
-    
-    Based on the file name and category, provide:
-    1. A likely summary of what this document contains.
-    2. 3 actionable points or things the project manager should check in this document.
-    3. Potential risks related to this type of document in construction.
-    
-    Output in professional Arabic language. Keep it concise.`;
-
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-      });
-      setAiSummary({ title: doc.title, content: response.text || "Could not generate summary." });
-    } catch (error) {
-      console.error(error);
-      setAiSummary({ title: doc.title, content: "Error communicating with AI service." });
-    } finally {
-      setIsAiLoading(false);
-    }
+    // Stub call via provider
+    setTimeout(() => {
+       setAiSummary({ title: doc.title, content: "AI Summary is in Stub mode. Connect backend to enable." });
+       setIsAiLoading(false);
+    }, 800);
   };
 
   const filteredDocs = useMemo(() => {

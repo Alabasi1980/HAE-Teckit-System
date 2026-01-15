@@ -1,0 +1,64 @@
+
+openapi: 3.0.0
+info:
+  title: Enjaz One API
+  description: Core Operations API for Enjaz One Platform
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Local Development Server
+
+paths:
+  /work-items:
+    get:
+      summary: Retrieve all work items
+      tags: [WorkItems]
+      responses:
+        '200':
+          description: List of work items
+    post:
+      summary: Create a new work item
+      tags: [WorkItems]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: 
+                  type: string
+                type: 
+                  type: string
+      responses:
+        '201':
+          description: Created
+
+  /work-items/{id}:
+    get:
+      summary: Get item by ID
+      tags: [WorkItems]
+    put:
+      summary: Update item
+      tags: [WorkItems]
+
+  /projects:
+    get:
+      summary: List all projects
+      tags: [Projects]
+
+  /ai/analyze:
+    post:
+      summary: Analyze content using LLM
+      tags: [AI]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                context: 
+                  type: string
+      responses:
+        '200':
+          description: Analysis result

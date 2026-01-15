@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { Project, ProjectStatus } from '../../../shared/types';
-import { projectsRepo } from '../../../shared/services/projectsRepo';
+import { useData } from '../../../context/DataContext';
 import { Save, AlertTriangle, Archive, Trash2, Calendar, DollarSign, Info, MapPin } from 'lucide-react';
 
 interface ProjectSettingsProps {
@@ -9,6 +10,7 @@ interface ProjectSettingsProps {
 }
 
 const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onUpdate }) => {
+  const data = useData();
   const [formData, setFormData] = useState({
     name: project.name,
     code: project.code,
@@ -24,7 +26,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onUpdate }) 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await projectsRepo.update(project.id, formData);
+      await data.projects.update(project.id, formData);
       onUpdate();
       alert("Project settings updated successfully.");
     } catch (error) {

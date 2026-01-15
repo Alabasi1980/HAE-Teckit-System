@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
@@ -30,19 +31,20 @@ function AppContent() {
   const [authState, setAuthState] = useState<AuthState>('LOGIN');
   const [authUser, setAuthUser] = useState<User | null>(null);
 
-  // Core Data Hooks
+  // Core Data Hooks (Only trigger loads when authenticated)
   const { 
     workItems, projects, users, currentUser, notifications, isLoading: isDataLoading,
     handleStatusUpdate, handleSwitchUser, markAllNotifsRead, loadAllData 
   } = useEnjazCore();
 
   const [currentView, setCurrentView] = useState<View>('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile toggle
+  const [isCollapsed, setIsCollapsed] = useState(false); // Desktop collapse
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<WorkItem | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
+  // Check for existing session on mount
   useEffect(() => {
     const sessionUser = authService.getSession();
     if (sessionUser) {
@@ -78,6 +80,7 @@ function AppContent() {
     setIsCreateModalOpen(false);
   };
 
+  // Auth Flow Rendering
   if (authState === 'LOGIN') {
     return <LoginView onLoginSuccess={handleLoginSuccess} />;
   }
@@ -86,6 +89,7 @@ function AppContent() {
     return <MfaVerification user={authUser} onVerified={handleMfaVerified} onCancel={handleLogout} />;
   }
 
+  // Loading State (After Auth)
   if (isDataLoading) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-6">
@@ -98,8 +102,10 @@ function AppContent() {
     );
   }
 
+  // Main App (Authenticated)
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900 overflow-hidden">
+      {/* Sidebar */}
       <Sidebar 
         currentView={currentView} 
         setCurrentView={setCurrentView as any}
@@ -113,7 +119,10 @@ function AppContent() {
         onSwitchUser={(id) => { handleSwitchUser(id); }}
       />
 
-      <div className={`flex-1 flex flex-col min-w-0 h-screen overflow-hidden transition-all duration-300 ease-in-out`}>
+      {/* Main Content Area */}
+      <div 
+        className={`flex-1 flex flex-col min-w-0 h-screen overflow-hidden transition-all duration-300 ease-in-out`}
+      >
         <Header 
           currentView={currentView} 
           setCurrentView={setCurrentView as any}
@@ -132,8 +141,13 @@ function AppContent() {
         />
 
         <div className="flex-1 p-4 lg:p-6 overflow-y-auto no-scrollbar pb-24">
-          {/* Fix: Passing required props 'projects' and 'users' to Dashboard component */}
-          {currentView === 'dashboard' && <Dashboard items={workItems} projects={projects} users={users} />}
+          {currentView === 'dashboard' && (
+            <Dashboard 
+              items={workItems} 
+              projects={projects} 
+              users={users} 
+            />
+          )}
           {currentView === 'workitems' && <WorkItemList items={workItems} onItemClick={setSelectedItem} />}
           {currentView === 'approvals' && <ApprovalsView items={workItems} currentUser={currentUser} onItemClick={setSelectedItem} />}
           {currentView === 'projects' && (

@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { WorkItem, Priority, Status, Project, User, ApprovalDecision, Comment, Subtask } from '../../shared/types';
-import { workItemsRepo } from '../../shared/services/workItemsRepo';
+import { useData } from '../../context/DataContext';
 import { X, Clock, User as UserIcon, MapPin, EyeOff, Lock, RefreshCcw, Briefcase } from 'lucide-react';
 
 // Sub-components
@@ -20,6 +21,7 @@ interface WorkItemDetailProps {
 }
 
 const WorkItemDetail: React.FC<WorkItemDetailProps> = ({ item, project, assignee, currentUser, onClose, onUpdateStatus, onRefresh }) => {
+  const data = useData();
   const [submitting, setSubmitting] = useState(false);
   const [subtasks, setSubtasks] = useState<Subtask[]>(item.subtasks || []);
   
@@ -36,7 +38,7 @@ const WorkItemDetail: React.FC<WorkItemDetailProps> = ({ item, project, assignee
     }
     setSubmitting(true);
     try {
-      await workItemsRepo.submitApprovalDecision(item.id, stepId, decision, comment);
+      await data.workItems.submitApprovalDecision(item.id, stepId, decision, comment);
       onRefresh(); 
       onClose(); 
     } catch (e) {
@@ -57,7 +59,7 @@ const WorkItemDetail: React.FC<WorkItemDetailProps> = ({ item, project, assignee
            comments: '',
            decisionDate: undefined
        }));
-       await workItemsRepo.update(item.id, {
+       await data.workItems.update(item.id, {
            status: Status.PENDING_APPROVAL,
            approvalChain: resetChain
        });
@@ -76,13 +78,13 @@ const WorkItemDetail: React.FC<WorkItemDetailProps> = ({ item, project, assignee
       userAvatar: currentUser.avatar,
       timestamp: new Date().toISOString()
     };
-    await workItemsRepo.addComment(item.id, comment);
+    await data.workItems.addComment(item.id, comment);
     onRefresh();
   };
 
   const handleUpdateSubtasks = async (newSubtasks: Subtask[]) => {
     setSubtasks(newSubtasks);
-    await workItemsRepo.update(item.id, { subtasks: newSubtasks });
+    await data.workItems.update(item.id, { subtasks: newSubtasks });
     onRefresh();
   };
 

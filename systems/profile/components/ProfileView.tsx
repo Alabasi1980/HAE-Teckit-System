@@ -1,7 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { User, Asset, Status, WorkItem } from '../../../shared/types';
-import { assetsRepo } from '../../../shared/services/assetsRepo';
-import { workItemsRepo } from '../../../shared/services/workItemsRepo';
+import { useData } from '../../../context/DataContext';
 import { 
   Box, CheckSquare, Clock, MapPin, Phone, Mail, 
   Shield, Calendar, Zap, TrendingUp, 
@@ -15,6 +15,7 @@ interface ProfileViewProps {
 }
 
 const ProfileView: React.FC<ProfileViewProps> = ({ user, onNavigate, onItemClick }) => {
+  const data = useData();
   const [myAssets, setMyAssets] = useState<Asset[]>([]);
   const [recentActions, setRecentActions] = useState<WorkItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,8 +31,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, onNavigate, onItemClick
       setIsLoading(true);
       try {
         const [allAssets, allItems] = await Promise.all([
-          assetsRepo.getAll(),
-          workItemsRepo.getAll()
+          data.assets.getAll(),
+          data.workItems.getAll()
         ]);
 
         const mine = allAssets.filter(a => a.assignedToUserId === user.id);
@@ -61,7 +62,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, onNavigate, onItemClick
     };
 
     loadProfileData();
-  }, [user.id]);
+  }, [user.id, data]);
 
   if (isLoading) {
     return (

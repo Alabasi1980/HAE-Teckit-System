@@ -1,7 +1,11 @@
+
 import React, { useState, useMemo } from 'react';
 import { Project, WorkItem, ProjectStatus, ProjectHealth } from '../../shared/types';
 import ProjectCard from './components/ProjectCard';
-import { Search, Plus, Building2, AlertCircle, CheckCircle2, DollarSign } from 'lucide-react';
+import { Search, Plus, Building2, AlertCircle, CheckCircle2, DollarSign, Lock } from 'lucide-react';
+import { useEnjazCore } from '../../shared/hooks/useEnjazCore'; // To get current user
+import { PermissionGate } from '../../shared/rbac/PermissionGate';
+import { PERMISSIONS } from '../../shared/rbac/permissions';
 
 interface ProjectsListViewProps {
   projects: Project[];
@@ -13,6 +17,9 @@ interface ProjectsListViewProps {
 const ProjectsListView: React.FC<ProjectsListViewProps> = ({ projects, workItems, onSelectProject, onCreateProject }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('All');
+  
+  // We need the current user for RBAC
+  const { currentUser } = useEnjazCore();
 
   // Stats
   const stats = useMemo(() => {
@@ -41,7 +48,13 @@ const ProjectsListView: React.FC<ProjectsListViewProps> = ({ projects, workItems
         <SummaryCard label="Total Projects" value={stats.total} icon={<Building2 />} color="text-blue-600" bg="bg-blue-50" />
         <SummaryCard label="Active Projects" value={stats.active} icon={<CheckCircle2 />} color="text-emerald-600" bg="bg-emerald-50" />
         <SummaryCard label="At Risk" value={stats.atRisk} icon={<AlertCircle />} color="text-amber-600" bg="bg-amber-50" />
-        <SummaryCard label="Capital Budget" value={`$${stats.budget}`} icon={<DollarSign />} color="text-slate-900" bg="bg-slate-100" />
+        
+        {/* Protect Budget View */}
+        <PermissionGate user={currentUser} permission={PERMISSIONS.PROJECT_VIEW_BUDGET} fallback={
+           <SummaryCard label="Capital Budget" value="Locked" icon={<Lock />} color="text-slate-400" bg="bg-slate-100" />
+        }>
+           <SummaryCard label="Capital Budget" value={`$${stats.budget}`} icon={<DollarSign />} color="text-slate-900" bg="bg-slate-100" />
+        </PermissionGate>
       </div>
 
       {/* 2. Control Bar */}
@@ -69,12 +82,16 @@ const ProjectsListView: React.FC<ProjectsListViewProps> = ({ projects, workItems
                </button>
              ))}
           </div>
-          <button 
-            onClick={onCreateProject}
-            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl text-sm font-black hover:scale-105 transition-transform shadow-lg shadow-slate-900/20"
-          >
-            <Plus size={18} /> New Project
-          </button>
+          
+          {/* Permission Gate for Creating Projects */}
+          <PermissionGate user={currentUser} permission={PERMISSIONS.PROJECT_CREATE}>
+            <button 
+              onClick={onCreateProject}
+              className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl text-sm font-black hover:scale-105 transition-transform shadow-lg shadow-slate-900/20"
+            >
+              <Plus size={18} /> New Project
+            </button>
+          </PermissionGate>
         </div>
       </div>
 

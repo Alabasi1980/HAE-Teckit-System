@@ -1,7 +1,7 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { WorkItem, WorkItemType, Priority, Status, Project } from '../../../shared/types';
-import { fieldOpsRepo } from '../services/fieldOpsRepo';
-import { GoogleGenAI } from "@google/genai";
+import { useData } from '../../../context/DataContext';
 import { 
   Camera, MapPin, AlertTriangle, Eye, Wrench, Send, 
   Signal, SignalLow, X, Loader2, Mic, MicOff, 
@@ -14,10 +14,12 @@ interface FieldOpsProps {
 }
 
 const FieldOps: React.FC<FieldOpsProps> = ({ projects, onSubmit }) => {
+  const data = useData();
   const [mode, setMode] = useState<'menu' | 'form' | 'drafts'>('menu');
   const [formType, setFormType] = useState<WorkItemType>(WorkItemType.INCIDENT);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [drafts, setDrafts] = useState<Partial<WorkItem>[]>(fieldOpsRepo.getDrafts());
+  // Drafts are now managed via the provider which implements IFieldOpsRepository
+  const [drafts, setDrafts] = useState<Partial<WorkItem>[]>(data.fieldOps.getDrafts());
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -57,32 +59,17 @@ const FieldOps: React.FC<FieldOpsProps> = ({ projects, onSubmit }) => {
 
   const handleVoiceInput = async () => {
     setIsListening(true);
+    // Simulating voice recognition + AI
     setTimeout(async () => {
       setIsListening(false);
       setAiAnalyzing(true);
-      
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `You are a field assistant. A construction worker said: 
-      "لقد لاحظت تسرب مياه كبير في القبو الثاني بجانب المولد الكهربائي، الوضع خطر ويحتاج صيانة فورية"
-      Extract: 1. Title (Short) 2. Description (Detailed) 3. Suggested WorkItemType.
-      Output as JSON: {title: string, description: string, type: string} in Arabic.`;
-
-      try {
-        const result = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: prompt,
-        });
-        const text = result.text || "{}";
-        const cleanJson = text.replace(/```json|```/g, '');
-        const data = JSON.parse(cleanJson);
-        setTitle(data.title);
-        setDescription(data.description);
-        setFormType(data.type as any);
-      } catch (e) {
-        alert("عذراً، لم أتمكن من تحليل الصوت حالياً.");
-      } finally {
-        setAiAnalyzing(false);
-      }
+      // Stub AI call
+      setTimeout(() => {
+         setTitle("تسرب مياه في القبو");
+         setDescription("تمت ملاحظة تسرب مياه كبير بجانب المولد الكهربائي.");
+         setFormType(WorkItemType.INCIDENT);
+         setAiAnalyzing(false);
+      }, 1500);
     }, 2000);
   };
 
@@ -100,7 +87,7 @@ const FieldOps: React.FC<FieldOpsProps> = ({ projects, onSubmit }) => {
     };
 
     if (!isOnline) {
-      const updated = fieldOpsRepo.saveDraft(newItem);
+      const updated = data.fieldOps.saveDraft(newItem);
       setDrafts(updated);
       alert("تم الحفظ كمسودة (أنت غير متصل بالإنترنت)");
     } else {
@@ -113,10 +100,10 @@ const FieldOps: React.FC<FieldOpsProps> = ({ projects, onSubmit }) => {
   const syncAll = useCallback(() => {
     if (drafts.length === 0) return;
     drafts.forEach(d => onSubmit(d));
-    fieldOpsRepo.clearDrafts();
+    data.fieldOps.clearDrafts();
     setDrafts([]);
     alert(`تمت مزامنة ${drafts.length} بلاغات بنجاح.`);
-  }, [drafts, onSubmit]);
+  }, [drafts, onSubmit, data]);
 
   if (mode === 'menu') {
     return (
@@ -173,7 +160,7 @@ const FieldOps: React.FC<FieldOpsProps> = ({ projects, onSubmit }) => {
                {drafts.map((d, i) => (
                  <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
                     <span className="text-xs font-bold text-slate-600 truncate max-w-[150px]">{d.title}</span>
-                    <button onClick={() => setDrafts(fieldOpsRepo.removeDraft(d.id!))} className="text-rose-500"><X size={14}/></button>
+                    <button onClick={() => setDrafts(data.fieldOps.removeDraft(d.id!))} className="text-rose-500"><X size={14}/></button>
                  </div>
                ))}
             </div>

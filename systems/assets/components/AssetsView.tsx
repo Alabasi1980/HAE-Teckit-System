@@ -1,63 +1,146 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { Asset, AssetStatus, AssetCategory } from '../../../shared/types';
-import { assetsRepo } from '../../../shared/services/assetsRepo';
-import { GoogleGenAI } from "@google/genai";
+import { Asset, AssetStatus, AssetCategory, WorkItem, WorkItemType, Priority, Status, User } from '../../../shared/types';
+import { useData } from '../../../context/DataContext';
+import { useEnjazCore } from '../../../shared/hooks/useEnjazCore';
+import { PermissionGate } from '../../../shared/rbac/PermissionGate';
+import { PERMISSIONS } from '../../../shared/rbac/permissions';
 import AssetCard from './AssetCard';
 import AssetStats from './AssetStats';
-import { Search, Plus, Sparkles, X, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Search, Plus, Sparkles, X, Loader2, AlertTriangle, CheckCircle2, ArrowRightLeft, FileWarning } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 const AssetsView: React.FC = () => {
+  const data = useData();
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('All');
   const [filterStatus, setFilterStatus] = useState<string>('All');
 
+  // RBAC Context
+  const { currentUser } = useEnjazCore();
+
+  // Selection & Modal States
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [assetHistory, setAssetHistory] = useState<WorkItem[]>([]);
+  const [detailTab, setDetailTab] = useState<'details' | 'history'>('details');
+  
+  // Action States
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
+  const [targetUserId, setTargetUserId] = useState('');
+  const [maintenanceNote, setMaintenanceNote] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // AI State
   const [aiInsight, setAiInsight] = useState<{asset: Asset, content: string} | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
-    loadAssets();
+    loadData();
   }, []);
 
-  const loadAssets = async () => {
+  const loadData = async () => {
     setLoading(true);
-    const data = await assetsRepo.getAll();
-    setAssets(data);
+    const [assetsData, usersData] = await Promise.all([
+      data.assets.getAll(),
+      data.users.getAll()
+    ]);
+    setAssets(assetsData);
+    setUsers(usersData);
     setLoading(false);
+  };
+
+  const loadAssetHistory = async (assetId: string) => {
+    const allItems = await data.workItems.getAll();
+    const history = allItems.filter(item => item.assetId === assetId).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    setAssetHistory(history);
+  };
+
+  const handleAssetClick = (asset: Asset) => {
+    setSelectedAsset(asset);
+    setDetailTab('details');
+    loadAssetHistory(asset.id);
   };
 
   const handleAiHealthCheck = async (asset: Asset) => {
     setIsAiLoading(true);
     setAiInsight({ asset, content: '' });
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `You are a heavy machinery expert. Analyze this asset:
-    Name: ${asset.name}
-    Category: ${asset.category}
-    Serial: ${asset.serialNumber}
-    Value: $${asset.value}
-    Status: ${asset.status}
-    Last Maintenance: ${asset.lastMaintenance || 'No record'}
-    
-    Provide:
-    1. A technical health assessment.
-    2. Recommended maintenance checklist for next 3 months.
-    3. Estimated lifespan and replacement risk.
-    
-    Answer in professional Arabic. Keep it structured and concise.`;
+    // AI logic handled here or via service
+    // For separation, ideally use data.ai.analyzeAsset() if it existed, but direct call for now or use stub logic
+    // Using a stub behavior for now since direct key access is discouraged in UI
+    setTimeout(() => {
+       setAiInsight({ asset, content: "AI Analysis is currently running in stub mode. Connect to backend for live Gemini insights." });
+       setIsAiLoading(false);
+    }, 1000);
+  };
 
+  const handleTransferCustody = async () => {
+    if (!selectedAsset || !targetUserId) return;
+    setIsProcessing(true);
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
+      const targetUser = users.find(u => u.id === targetUserId);
+      await data.assets.update(selectedAsset.id, {
+        assignedToUserId: targetUserId,
+        assignedToUserName: targetUser?.name,
+        status: AssetStatus.IN_USE,
+        location: 'With Employee' 
       });
-      setAiInsight({ asset, content: response.text || "لم يتمكن المساعد من تحليل البيانات حالياً." });
-    } catch (err) {
-      setAiInsight({ asset, content: "حدث خطأ أثناء الاتصال بخادم الذكاء الاصطناعي." });
+      await data.workItems.create({
+        type: WorkItemType.CUSTODY,
+        title: `Custody Transfer: ${selectedAsset.name}`,
+        description: `Asset transferred from ${selectedAsset.assignedToUserName || 'Storage'} to ${targetUser?.name}`,
+        priority: Priority.LOW,
+        status: Status.DONE,
+        assetId: selectedAsset.id,
+        employeeId: targetUserId,
+        projectId: 'General'
+      });
+      alert("Custody transferred successfully.");
+      setShowTransferModal(false);
+      setTargetUserId('');
+      loadData();
+      setSelectedAsset(null);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to transfer custody.");
     } finally {
-      setIsAiLoading(false);
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReportMaintenance = async () => {
+    if (!selectedAsset || !maintenanceNote) return;
+    setIsProcessing(true);
+    try {
+      await data.assets.update(selectedAsset.id, {
+        status: AssetStatus.MAINTENANCE
+      });
+      await data.workItems.create({
+        type: WorkItemType.INCIDENT,
+        title: `Maintenance: ${selectedAsset.name}`,
+        description: maintenanceNote,
+        priority: Priority.HIGH,
+        status: Status.OPEN,
+        assetId: selectedAsset.id,
+        tags: ['Maintenance', selectedAsset.category],
+        projectId: 'General'
+      });
+      alert("Maintenance ticket created.");
+      setShowMaintenanceModal(false);
+      setMaintenanceNote('');
+      loadData();
+      setSelectedAsset(null);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to report issue.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -71,6 +154,7 @@ const AssetsView: React.FC = () => {
     });
   }, [assets, searchTerm, filterCategory, filterStatus]);
 
+  // Render ... (Logic mostly same, just ensuring no direct repo imports)
   return (
     <div className="flex flex-col h-full space-y-8 animate-fade-in pb-10 overflow-hidden">
       {!loading && <AssetStats assets={assets} />}
@@ -108,9 +192,11 @@ const AssetsView: React.FC = () => {
 
            <div className="h-10 w-px bg-slate-100 hidden lg:block"></div>
 
-           <button className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl text-sm font-black hover:scale-105 transition-transform shadow-lg shadow-slate-900/20">
-             <Plus size={18} /> إضافة أصل جديد
-           </button>
+           <PermissionGate user={currentUser} permission={PERMISSIONS.ASSET_CREATE}>
+             <button className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl text-sm font-black hover:scale-105 transition-transform shadow-lg shadow-slate-900/20">
+               <Plus size={18} /> إضافة أصل جديد
+             </button>
+           </PermissionGate>
         </div>
       </div>
 
@@ -131,7 +217,7 @@ const AssetsView: React.FC = () => {
               <AssetCard 
                 key={asset.id} 
                 asset={asset} 
-                onClick={() => {}} 
+                onClick={() => handleAssetClick(asset)} 
                 onAnalyze={handleAiHealthCheck}
               />
             ))}
@@ -169,17 +255,157 @@ const AssetsView: React.FC = () => {
                    </div>
                  )}
               </div>
-
-              {!isAiLoading && (
-                <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-center">
-                   <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                     <CheckCircle2 size={14} className="text-emerald-500" /> التقرير مُولد بناءً على البيانات الفنية المتوفرة في النظام.
-                   </div>
-                </div>
-              )}
            </div>
         </div>
       )}
+
+      {selectedAsset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setSelectedAsset(null)}>
+           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()}>
+              <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                   {/* Icon */} {selectedAsset.name}
+                 </h3>
+                 <button onClick={() => setSelectedAsset(null)} className="p-1 hover:bg-slate-200 rounded-full"><X size={20} /></button>
+              </div>
+
+              <div className="flex border-b border-slate-100">
+                 <button onClick={() => setDetailTab('details')} className={`flex-1 py-3 text-sm font-medium ${detailTab === 'details' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}>Overview</button>
+                 <button onClick={() => setDetailTab('history')} className={`flex-1 py-3 text-sm font-medium ${detailTab === 'history' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}>History</button>
+              </div>
+              
+              <div className="p-6 h-[400px] overflow-y-auto">
+                 {detailTab === 'details' ? (
+                   <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                            <p className="text-xs text-slate-400 uppercase font-bold">Serial Number</p>
+                            <p className="font-mono font-medium text-slate-800">{selectedAsset.serialNumber}</p>
+                          </div>
+                          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                            <p className="text-xs text-slate-400 uppercase font-bold">Current Value</p>
+                            <p className="font-mono font-medium text-slate-800">${selectedAsset.value.toLocaleString()}</p>
+                          </div>
+                      </div>
+
+                      <div>
+                          <h4 className="text-sm font-bold text-slate-800 mb-2 border-b border-slate-100 pb-1">Custody & Location</h4>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <p className="text-slate-500 text-xs">Assigned To</p>
+                                <p className="font-medium mt-1">{selectedAsset.assignedToUserName || 'Unassigned'}</p>
+                            </div>
+                            <div>
+                                <p className="text-slate-500 text-xs">Current Location</p>
+                                <p className="font-medium mt-1">{selectedAsset.location}</p>
+                            </div>
+                          </div>
+                      </div>
+
+                      <div className="flex gap-2 pt-4">
+                          <PermissionGate user={currentUser} permission={PERMISSIONS.ASSET_TRANSFER}>
+                            <button 
+                              onClick={() => setShowTransferModal(true)}
+                              className="flex-1 py-3 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 flex items-center justify-center gap-2"
+                            >
+                              <ArrowRightLeft size={16} /> Transfer Custody
+                            </button>
+                          </PermissionGate>
+                          
+                          <button 
+                             onClick={() => setShowMaintenanceModal(true)}
+                             className="flex-1 py-3 bg-orange-50 text-orange-700 border border-orange-200 rounded-lg text-sm font-bold hover:bg-orange-100 flex items-center justify-center gap-2"
+                          >
+                            <FileWarning size={16} /> Report Issue
+                          </button>
+                      </div>
+                   </div>
+                 ) : (
+                   <div className="space-y-4">
+                     {assetHistory.map(item => (
+                         <div key={item.id} className="flex gap-4 border-b border-slate-50 pb-2">
+                            <div className="text-xs text-slate-400 w-24 shrink-0">{new Date(item.createdAt).toLocaleDateString()}</div>
+                            <div>
+                               <p className="font-bold text-slate-700 text-sm">{item.title}</p>
+                               <p className="text-xs text-slate-500">{item.description}</p>
+                            </div>
+                         </div>
+                     ))}
+                     {assetHistory.length === 0 && <p className="text-center text-slate-400 text-sm">No history yet.</p>}
+                   </div>
+                 )}
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Maintenance Modal */}
+      {showMaintenanceModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 animate-scale-in">
+             <h3 className="font-bold text-lg mb-4 text-orange-700 flex items-center gap-2">
+               <AlertTriangle size={20} /> Report Issue
+             </h3>
+             
+             <div className="mb-4">
+               <label className="block text-xs font-bold text-slate-700 mb-1">Issue Description</label>
+               <textarea 
+                 className="w-full p-2 border border-slate-200 rounded-lg h-24 text-sm"
+                 placeholder="Describe the breakdown or damage..."
+                 value={maintenanceNote}
+                 onChange={(e) => setMaintenanceNote(e.target.value)}
+               />
+             </div>
+
+             <div className="flex justify-end gap-2">
+               <button onClick={() => setShowMaintenanceModal(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-50 rounded-lg text-sm">Cancel</button>
+               <button 
+                 onClick={handleReportMaintenance}
+                 disabled={!maintenanceNote || isProcessing}
+                 className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-bold hover:bg-orange-700 disabled:opacity-50"
+               >
+                 {isProcessing ? 'Reporting...' : 'Submit Report'}
+               </button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Modal */}
+      {showTransferModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 animate-scale-in">
+             <h3 className="font-bold text-lg mb-4">Transfer Custody</h3>
+             <p className="text-sm text-slate-500 mb-4">Select the employee to take responsibility for <strong>{selectedAsset?.name}</strong>.</p>
+             
+             <div className="mb-4">
+               <label className="block text-xs font-bold text-slate-700 mb-1">New Custodian</label>
+               <select 
+                 className="w-full p-2 border border-slate-200 rounded-lg"
+                 value={targetUserId}
+                 onChange={(e) => setTargetUserId(e.target.value)}
+               >
+                 <option value="">Select Employee...</option>
+                 {users.map(u => (
+                   <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                 ))}
+               </select>
+             </div>
+
+             <div className="flex justify-end gap-2">
+               <button onClick={() => setShowTransferModal(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-50 rounded-lg text-sm">Cancel</button>
+               <button 
+                 onClick={handleTransferCustody}
+                 disabled={!targetUserId || isProcessing}
+                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 disabled:opacity-50"
+               >
+                 {isProcessing ? 'Processing...' : 'Confirm Transfer'}
+               </button>
+             </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

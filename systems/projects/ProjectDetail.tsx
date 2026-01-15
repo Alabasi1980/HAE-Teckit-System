@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Project, WorkItem, ProjectStatus, User } from '../../shared/types';
 import WorkItemList from '../operations/WorkItemList';
@@ -5,8 +6,7 @@ import ProjectOverview from './components/ProjectOverview';
 import ProjectDocuments from './components/ProjectDocuments';
 import ProjectAssets from './components/ProjectAssets';
 import ProjectSettings from './components/ProjectSettings';
-import { usersRepo } from '../../shared/services/usersRepo';
-import { projectsRepo } from '../../shared/services/projectsRepo';
+import { useData } from '../../context/DataContext';
 import { Building2, MapPin, ArrowLeft, Settings, Calendar, ShieldCheck, Users, Mail, Phone, Plus, Trash2, X, Search, Check } from 'lucide-react';
 
 interface ProjectDetailProps {
@@ -18,6 +18,7 @@ interface ProjectDetailProps {
 }
 
 const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, items, onBack, onItemClick, onNavigate }) => {
+  const data = useData();
   const [tab, setTab] = useState<'overview' | 'workitems' | 'docs' | 'assets' | 'team' | 'settings'>('overview');
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
@@ -25,9 +26,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, items, onBack, o
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
 
   const loadTeam = async () => {
-    const users = await usersRepo.getAll();
+    const users = await data.users.getAll();
     setAllUsers(users);
-    const currentProject = await projectsRepo.getById(project.id);
+    const currentProject = await data.projects.getById(project.id);
     const teamIds = currentProject?.teamIds || project.teamIds;
     const filtered = users.filter(u => teamIds.includes(u.id));
     setTeamMembers(filtered);
@@ -38,11 +39,11 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, items, onBack, o
   }, [project.id]);
 
   const handleAddMember = async (userId: string) => {
-    const currentProject = await projectsRepo.getById(project.id);
+    const currentProject = await data.projects.getById(project.id);
     if (!currentProject) return;
 
     const newTeamIds = [...currentProject.teamIds, userId];
-    await projectsRepo.update(project.id, { teamIds: newTeamIds });
+    await data.projects.update(project.id, { teamIds: newTeamIds });
     
     await loadTeam();
     setIsAddMemberModalOpen(false);
@@ -52,11 +53,11 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, items, onBack, o
   const handleRemoveMember = async (userId: string) => {
     if (!window.confirm("Are you sure you want to remove this member from the project?")) return;
     
-    const currentProject = await projectsRepo.getById(project.id);
+    const currentProject = await data.projects.getById(project.id);
     if (!currentProject) return;
 
     const newTeamIds = currentProject.teamIds.filter(id => id !== userId);
-    await projectsRepo.update(project.id, { teamIds: newTeamIds });
+    await data.projects.update(project.id, { teamIds: newTeamIds });
     
     await loadTeam();
   };
@@ -75,6 +76,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, items, onBack, o
     (u.name.toLowerCase().includes(memberSearchTerm.toLowerCase()) || u.role.toLowerCase().includes(memberSearchTerm.toLowerCase()))
   );
 
+  // Render logic remains mostly same
   return (
     <div className="flex flex-col h-[calc(100vh-100px)] animate-fade-in space-y-6">
       <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm relative overflow-hidden">
