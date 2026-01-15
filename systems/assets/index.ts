@@ -1,0 +1,1 @@
+export { default as AssetsView } from './components/AssetsView';

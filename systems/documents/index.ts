@@ -1,0 +1,1 @@
+export { default as DocumentsView } from './components/DocumentsView';
