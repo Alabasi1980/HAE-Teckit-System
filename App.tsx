@@ -25,7 +25,7 @@ type View = 'dashboard' | 'workitems' | 'approvals' | 'projects' | 'field-ops' |
 type AuthState = 'LOGIN' | 'MFA' | 'AUTHENTICATED';
 
 function AppContent() {
-  const data = useData(); 
+  const data = useData();
   const [authState, setAuthState] = useState<AuthState>('LOGIN');
   const [authUser, setAuthUser] = useState<User | null>(null);
 
@@ -60,7 +60,7 @@ function AppContent() {
       authService.createSession(authUser);
       data.users.setCurrentUser(authUser.id);
       setAuthState('AUTHENTICATED');
-      loadAllData();
+      loadAllData(true);
     }
   };
 
@@ -73,7 +73,7 @@ function AppContent() {
   const handleCreateWorkItem = async (newItem: Partial<WorkItem>) => {
     try {
       await data.workItems.create(newItem);
-      await loadAllData();
+      await loadAllData(true);
       setIsCreateModalOpen(false);
     } catch (err) {
       setError("فشل إنشاء العملية الجديدة.");

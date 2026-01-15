@@ -18,6 +18,8 @@ export const useEnjazCore = () => {
   const loadAllData = useCallback(async (forceRefresh = false) => {
     setError(null);
     try {
+      if (forceRefresh) data.invalidateCache();
+      
       const [items, projs, usrs, currUser] = await Promise.all([
         data.workItems.getAll(forceRefresh),
         data.projects.getAll(forceRefresh),
