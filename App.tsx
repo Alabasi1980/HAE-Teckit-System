@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle, X } from 'lucide-react';
 
 // Data Layer
 import { DataProvider, useData } from './context/DataContext';
@@ -30,7 +30,7 @@ function AppContent() {
   const [authUser, setAuthUser] = useState<User | null>(null);
 
   const { 
-    workItems, projects, users, currentUser, notifications, isLoading: isDataLoading,
+    workItems, projects, users, currentUser, notifications, isLoading: isDataLoading, error, setError,
     handleStatusUpdate, handleSwitchUser, markAllNotifsRead, loadAllData 
   } = useEnjazCore();
 
@@ -71,9 +71,13 @@ function AppContent() {
   };
 
   const handleCreateWorkItem = async (newItem: Partial<WorkItem>) => {
-    await data.workItems.create(newItem);
-    await loadAllData();
-    setIsCreateModalOpen(false);
+    try {
+      await data.workItems.create(newItem);
+      await loadAllData();
+      setIsCreateModalOpen(false);
+    } catch (err) {
+      setError("فشل إنشاء العملية الجديدة.");
+    }
   };
 
   if (authState === 'LOGIN') {
@@ -97,7 +101,20 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900 overflow-hidden">
+    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900 overflow-hidden relative">
+      {/* Error Toast */}
+      {error && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[200] w-full max-w-md animate-slide-in-down px-4" dir="rtl">
+           <div className="bg-rose-600 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-4 border border-rose-500">
+              <div className="flex items-center gap-3">
+                 <AlertCircle size={20} />
+                 <p className="text-sm font-bold">{error}</p>
+              </div>
+              <button onClick={() => setError(null)} className="p-1 hover:bg-white/10 rounded-lg"><X size={18}/></button>
+           </div>
+        </div>
+      )}
+
       <Sidebar 
         currentView={currentView} 
         setCurrentView={setCurrentView as any}

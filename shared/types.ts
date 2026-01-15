@@ -1,4 +1,3 @@
-
 export enum ProjectStatus {
   PLANNING = 'Planning',
   ACTIVE = 'Active',
@@ -135,24 +134,6 @@ export interface Notification {
   aiSummary?: string; // Short AI summary for dense notifications
 }
 
-export interface NotificationChannelConfig {
-  email: boolean;
-  inApp: boolean;
-  push: boolean;
-}
-
-export interface NotificationPreferences {
-  userId: string;
-  dndEnabled: boolean;
-  dndStartTime: string; // HH:mm
-  dndEndTime: string; // HH:mm
-  channels: {
-    critical: NotificationChannelConfig;
-    mentions: NotificationChannelConfig;
-    updates: NotificationChannelConfig;
-  }
-}
-
 export interface Subtask {
   id: string;
   title: string;
@@ -177,8 +158,7 @@ export interface WorkItem {
   location?: { lat: number; lng: number };
   attachments?: string[];
   subtasks?: Subtask[];
-  serviceType?: string;
-  department?: string;
+  // Fix: Add missing properties for asset and employee tracking to resolve compilation errors
   assetId?: string;
   employeeId?: string;
 }
@@ -226,4 +206,17 @@ export interface AutomationRule {
   description: string;
   isEnabled: boolean;
   trigger: string;
+}
+
+// Fix: Add missing NotificationPreferences interface definition
+export interface NotificationPreferences {
+  userId: string;
+  dndEnabled: boolean;
+  dndStartTime: string;
+  dndEndTime: string;
+  channels: {
+    critical: { email: boolean; inApp: boolean; push: boolean };
+    mentions: { email: boolean; inApp: boolean; push: boolean };
+    updates: { email: boolean; inApp: boolean; push: boolean };
+  };
 }

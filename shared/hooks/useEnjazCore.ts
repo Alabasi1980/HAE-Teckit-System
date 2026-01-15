@@ -12,11 +12,12 @@ export const useEnjazCore = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Reference for rollback if needed
   const previousWorkItems = useRef<WorkItem[]>([]);
 
   const loadAllData = useCallback(async (forceRefresh = false) => {
+    setError(null);
     try {
       const [items, projs, usrs, currUser] = await Promise.all([
         data.workItems.getAll(forceRefresh),
@@ -34,8 +35,9 @@ export const useEnjazCore = () => {
         const notifs = await data.notifications.getForUser(currUser.id);
         setNotifications(notifs);
       }
-    } catch (error) {
-      console.error("Critical: Data Load Failed", error);
+    } catch (err: any) {
+      console.error("Critical: Data Load Failed", err);
+      setError("فشل في مزامنة البيانات مع الخادم. يرجى التحقق من الاتصال.");
     } finally {
       setIsLoading(false);
     }
@@ -43,53 +45,49 @@ export const useEnjazCore = () => {
 
   useEffect(() => {
     loadAllData();
-    const interval = setInterval(() => {
-       if (currentUser) {
-         data.notifications.getForUser(currentUser.id).then(setNotifications);
-       }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [currentUser, loadAllData]);
+  }, [loadAllData]);
 
   const handleStatusUpdate = async (id: string, newStatus: Status) => {
-    // 1. Optimistic Update (Immediate Feedback)
     previousWorkItems.current = [...workItems];
     setWorkItems(prev => prev.map(item => 
       item.id === id ? { ...item, status: newStatus } : item
     ));
 
     try {
-      // 2. Real API Call
       await data.workItems.updateStatus(id, newStatus);
-      // Optional: Refresh cache background
       data.invalidateCache(); 
-    } catch (error) {
-      // 3. Rollback on Failure
+    } catch (err: any) {
       setWorkItems(previousWorkItems.current);
-      console.error("Failed to update status, rolling back UI", error);
-      alert("عذراً، فشل تحديث الحالة. يرجى المحاولة لاحقاً.");
+      setError("فشل تحديث الحالة. تأكد من صلاحياتك واتصالك بالشبكة.");
     }
   };
 
   const handleSwitchUser = async (userId: string) => {
-    const newUser = await data.users.setCurrentUser(userId);
-    if (newUser) {
-      setCurrentUser(newUser);
-      data.invalidateCache();
-      await loadAllData(true);
+    try {
+      const newUser = await data.users.setCurrentUser(userId);
+      if (newUser) {
+        setCurrentUser(newUser);
+        data.invalidateCache();
+        await loadAllData(true);
+      }
+    } catch (err) {
+      setError("فشل تبديل المستخدم.");
     }
   };
 
   const markAllNotifsRead = async () => {
     if (currentUser) {
-      // Optimistic read
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-      await data.notifications.markAllAsRead(currentUser.id);
+      try {
+        await data.notifications.markAllAsRead(currentUser.id);
+      } catch (err) {
+        // Silent fail for non-critical action
+      }
     }
   };
 
   return {
-    workItems, projects, users, currentUser, notifications, isLoading,
+    workItems, projects, users, currentUser, notifications, isLoading, error, setError,
     loadAllData, handleStatusUpdate, handleSwitchUser, markAllNotifsRead
   };
 };

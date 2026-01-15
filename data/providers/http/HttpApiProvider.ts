@@ -1,107 +1,109 @@
-import { IDataProvider, IWorkItemRepository } from '../../contracts';
+/**
+ * @class HttpApiProvider
+ * @description 
+ * تنفيذ الجسر البرمجي للربط مع API حقيقي. 
+ * تم إضافة كافة عمليات CRUD لضمان التوافق مع متطلبات السيرفر.
+ */
+import { IDataProvider, IWorkItemRepository, IProjectRepository, IUserRepository, INotificationRepository, IAiService, IAssetRepository, IDocumentRepository, IKnowledgeRepository, IFieldOpsRepository } from '../../contracts';
 import { WorkItemMapper, WorkItemDTO } from '../../mappers/WorkItemMapper';
+import { ProjectMapper } from '../../mappers/ProjectMapper';
+import { UserMapper } from '../../mappers/UserMapper';
+import { AssetMapper } from '../../mappers/AssetMapper';
+import { NotificationMapper } from '../../mappers/NotificationMapper';
+import { ArticleMapper } from '../../mappers/ArticleMapper';
+import { httpClient } from '../../../shared/services/httpClient';
 import { WorkItem, Status } from '../../../shared/types';
 
-class ApiClient {
-  private baseUrl: string;
-
-  constructor() {
-    this.baseUrl = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
-  }
-
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const token = localStorage.getItem('enjaz_session_token');
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      ...options.headers,
-    };
-
-    try {
-      const response = await fetch(`${this.baseUrl}${endpoint}`, { ...options, headers });
-      if (!response.ok) {
-        if (response.status === 401) {
-          console.error("Unauthorized request");
-        }
-        throw new Error(`API Error: ${response.statusText}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error(`Fetch error on ${endpoint}:`, error);
-      throw error;
-    }
-  }
-
-  get<T>(endpoint: string) { return this.request<T>(endpoint, { method: 'GET' }); }
-  post<T>(endpoint: string, data: any) { return this.request<T>(endpoint, { method: 'POST', body: JSON.stringify(data) }); }
-  put<T>(endpoint: string, data: any) { return this.request<T>(endpoint, { method: 'PUT', body: JSON.stringify(data) }); }
-  delete(endpoint: string) { return this.request(endpoint, { method: 'DELETE' }); }
-}
-
-class WorkItemHttpRepo implements IWorkItemRepository {
-  constructor(private client: ApiClient) {}
-
-  async getAll(): Promise<WorkItem[]> {
-    const dtos = await this.client.get<WorkItemDTO[]>('/work-items');
-    return dtos.map(WorkItemMapper.toDomain);
-  }
-
-  async getById(id: string): Promise<WorkItem | undefined> {
-    const dto = await this.client.get<WorkItemDTO>(`/work-items/${id}`);
-    return WorkItemMapper.toDomain(dto);
-  }
-
-  async create(item: Partial<WorkItem>): Promise<WorkItem> {
-    const dto = WorkItemMapper.toDTO(item);
-    const result = await this.client.post<WorkItemDTO>('/work-items', dto);
-    return WorkItemMapper.toDomain(result);
-  }
-
-  async update(id: string, updates: Partial<WorkItem>): Promise<WorkItem | null> {
-    const dto = WorkItemMapper.toDTO(updates);
-    const result = await this.client.put<WorkItemDTO>(`/work-items/${id}`, dto);
-    return WorkItemMapper.toDomain(result);
-  }
-
-  async updateStatus(id: string, status: Status): Promise<WorkItem | null> {
-    const result = await this.client.put<WorkItemDTO>(`/work-items/${id}/status`, { status });
-    return WorkItemMapper.toDomain(result);
-  }
-
-  async addComment(itemId: string, comment: any): Promise<WorkItem | null> {
-    const result = await this.client.post<WorkItemDTO>(`/work-items/${itemId}/comments`, comment);
-    return WorkItemMapper.toDomain(result);
-  }
-
-  async submitApprovalDecision(itemId: string, stepId: string, decision: any, comments: string): Promise<WorkItem | null> {
-    const result = await this.client.post<WorkItemDTO>(`/work-items/${itemId}/approvals/${stepId}`, { decision, comments });
-    return WorkItemMapper.toDomain(result);
-  }
-}
-
 export class HttpApiProvider implements IDataProvider {
-  private client = new ApiClient();
-  workItems = new WorkItemHttpRepo(this.client);
+  
+  workItems: IWorkItemRepository = {
+    // 1. جلب الكل
+    getAll: async () => (await httpClient.get<WorkItemDTO[]>('/work-items')).map(WorkItemMapper.toDomain),
+    
+    // 2. جلب عنصر واحد (المطلوب للتفاصيل)
+    getById: async (id) => WorkItemMapper.toDomain(await httpClient.get<WorkItemDTO>(`/work-items/${id}`)),
+    
+    // 3. إنشاء
+    create: async (item) => WorkItemMapper.toDomain(await httpClient.post<WorkItemDTO>('/work-items', WorkItemMapper.toDTO(item))),
+    
+    // 4. تحديث كلي (PUT)
+    update: async (id, updates) => WorkItemMapper.toDomain(await httpClient.put<WorkItemDTO>(`/work-items/${id}`, WorkItemMapper.toDTO(updates))),
+    
+    // 5. تحديث جزئي للحالة (PATCH)
+    updateStatus: async (id, status) => WorkItemMapper.toDomain(await httpClient.patch<WorkItemDTO>(`/work-items/${id}/status`, { status })),
+    
+    // 6. إضافة تعليق
+    addComment: async (itemId, comment) => WorkItemMapper.toDomain(await httpClient.post<WorkItemDTO>(`/work-items/${itemId}/comments`, comment)),
+    
+    // 7. اتخاذ قرار اعتماد
+    submitApprovalDecision: async (itemId, stepId, decision, comments) => WorkItemMapper.toDomain(await httpClient.post<WorkItemDTO>(`/work-items/${itemId}/approvals/${stepId}`, { decision, comments })),
+  };
 
-  get projects(): any { return { getAll: () => this.client.get('/projects') }; }
-  get users(): any { return { 
-    getAll: () => this.client.get('/users'),
-    getCurrentUser: () => this.client.get('/users/me'),
-    setCurrentUser: (id: string) => this.client.post('/users/session', { id })
-  }; }
-  get assets(): any { return { getAll: () => Promise.resolve([]) }; }
-  get documents(): any { return { getAll: () => Promise.resolve([]) }; }
-  get knowledge(): any { return { getAll: () => Promise.resolve([]) }; }
-  get notifications(): any { return { getForUser: (id: string) => this.client.get(`/notifications/${id}`) }; }
-  get fieldOps(): any { return { getDrafts: () => [], saveDraft: () => [], removeDraft: () => [], clearDrafts: () => {} }; }
-  get ai(): any { return { 
-    analyzeWorkItem: () => Promise.resolve("AI stub"),
-    generateExecutiveBrief: () => Promise.resolve("Brief stub")
-  }; }
+  // باقي الريبوزيتوريز تتبع نفس النمط...
+  projects: IProjectRepository = {
+    getAll: async () => (await httpClient.get<any[]>('/projects')).map(ProjectMapper.toDomain),
+    getById: async (id) => ProjectMapper.toDomain(await httpClient.get<any>(`/projects/${id}`)),
+    update: async (id, updates) => ProjectMapper.toDomain(await httpClient.put<any>(`/projects/${id}`, ProjectMapper.toDTO(updates))),
+  };
 
-  // Fix: Added missing invalidateCache method to satisfy IDataProvider interface requirement and allow correct usage in DataContext
-  invalidateCache(): void {
-    // Cache invalidation logic for HTTP provider
-    console.log('HTTP Cache Invalidation triggered');
-  }
+  users: IUserRepository = {
+    getAll: async () => (await httpClient.get<any[]>('/users')).map(UserMapper.toDomain),
+    getCurrentUser: async () => UserMapper.toDomain(await httpClient.get<any>('/users/me')),
+    setCurrentUser: async (id) => UserMapper.toDomain(await httpClient.post<any>(`/users/session`, { id })),
+  };
+
+  notifications: INotificationRepository = {
+    getAll: async () => (await httpClient.get<any[]>('/notifications')).map(NotificationMapper.toDomain),
+    getForUser: async (id) => (await httpClient.get<any[]>(`/notifications/user/${id}`)).map(NotificationMapper.toDomain),
+    getUnreadCount: async (id) => (await httpClient.get<{count: number}>(`/notifications/user/${id}/unread`)).count,
+    create: async (n) => NotificationMapper.toDomain(await httpClient.post<any>('/notifications', NotificationMapper.toDTO(n))),
+    markAsRead: async (id) => { await httpClient.post(`/notifications/${id}/read`, {}); },
+    markAllAsRead: async (id) => { await httpClient.post(`/notifications/user/${id}/read-all`, {}); },
+  };
+
+  knowledge: IKnowledgeRepository = { 
+    getAll: async () => (await httpClient.get<any[]>('/knowledge')).map(ArticleMapper.toDomain), 
+    search: async (q) => (await httpClient.get<any[]>(`/knowledge/search?q=${q}`)).map(ArticleMapper.toDomain), 
+    create: async (a) => ArticleMapper.toDomain(await httpClient.post<any>('/knowledge', ArticleMapper.toDTO(a))) 
+  };
+
+  assets: IAssetRepository = {
+    getAll: async () => (await httpClient.get<any[]>('/assets')).map(AssetMapper.toDomain),
+    getById: async (id) => AssetMapper.toDomain(await httpClient.get<any>(`/assets/${id}`)),
+    update: async (id, updates) => AssetMapper.toDomain(await httpClient.put<any>(`/assets/${id}`, AssetMapper.toDTO(updates))),
+    create: async (asset) => AssetMapper.toDomain(await httpClient.post<any>('/assets', AssetMapper.toDTO(asset))),
+  };
+
+  ai: IAiService = {
+    analyzeWorkItem: async (item) => (await httpClient.post<{analysis: string}>('/ai/analyze-work-item', item)).analysis,
+    suggestPriority: async (t, d) => (await httpClient.post<{priority: string}>('/ai/suggest-priority', { t, d })).priority,
+    generateExecutiveBrief: async (s) => (await httpClient.post<{brief: string}>('/ai/executive-brief', s)).brief,
+    analyzeNotification: async (t, m) => await httpClient.post('/ai/analyze-notification', { t, m }),
+    askWiki: async (c, q) => (await httpClient.post<{answer: string}>('/ai/ask-wiki', { c, q })).answer,
+  };
+
+  documents: IDocumentRepository = { 
+    getAll: async () => await httpClient.get<any[]>('/documents'), 
+    getByProjectId: async (pid) => await httpClient.get<any[]>(`/documents/project/${pid}`), 
+    upload: async (d) => await httpClient.post<any>('/documents/upload', d), 
+    delete: async (id) => { await httpClient.delete(`/documents/${id}`); } 
+  };
+
+  fieldOps: IFieldOpsRepository = { 
+    getDrafts: () => JSON.parse(localStorage.getItem('enjaz_field_drafts') || '[]'), 
+    saveDraft: (item) => { 
+        const d = JSON.parse(localStorage.getItem('enjaz_field_drafts') || '[]'); 
+        d.push(item); 
+        localStorage.setItem('enjaz_field_drafts', JSON.stringify(d)); 
+        return d; 
+    }, 
+    removeDraft: (id) => { 
+        const d = JSON.parse(localStorage.getItem('enjaz_field_drafts') || '[]').filter((x:any) => x.id !== id); 
+        localStorage.setItem('enjaz_field_drafts', JSON.stringify(d)); 
+        return d; 
+    }, 
+    clearDrafts: () => localStorage.removeItem('enjaz_field_drafts') 
+  };
+
+  invalidateCache() {}
 }
