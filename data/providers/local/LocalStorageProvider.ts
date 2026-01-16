@@ -14,7 +14,6 @@ export class LocalStorageProvider implements IDataProvider {
     return items;
   }
 
-  // --- PRIVATE SERVER-LIKE LOGIC ---
   private calculateSLA(priority: TicketPriority): { response: string, resolution: string } {
     const now = new Date();
     let resHours = 48; 
@@ -82,7 +81,6 @@ export class LocalStorageProvider implements IDataProvider {
     getComments: async (ticketId) => {
       const all = await storageService.getAll<TicketComment>('ticket_comments');
       const currentUser = JSON.parse(localStorage.getItem('enjaz_session_user') || '{}');
-      // RBAC Filter: Only privileged users see internal notes
       const canSeeInternal = ['Project Manager', 'Supervisor', 'Admin'].includes(currentUser.role);
       
       return all
@@ -103,15 +101,19 @@ export class LocalStorageProvider implements IDataProvider {
       const oldStatus = ticket.status;
       await this.tickets.update(id, { status: nextStatus });
       const currentUser = JSON.parse(localStorage.getItem('enjaz_session_user') || '{}');
+      
       await storageService.put('ticket_activities', {
-        id: `ACT-S-${Date.now()}`, ticketId: id, actorName: currentUser.name || 'System',
-        action: 'تغيير الحالة', details: `تم تغيير الحالة من ${oldStatus} إلى ${nextStatus}. ${comment || ''}`,
-        createdAt: new Date().toISOString()
+        id: `ACT-S-${Date.now()}`, 
+        ticketId: id, 
+        actorName: currentUser.name || 'System',
+        action: 'تغيير الحالة', 
+        details: `تم تغيير الحالة من ${oldStatus} إلى ${nextStatus}. ${comment || ''}`,
+        createdAt: new Date().toISOString(),
+        signatureUrl: ticket.signatureUrl // إدراج التوقيع في سجل النشاط إذا وجد
       });
     }
   };
 
-  // --- MOCK AI (Safe HTTP-Only simulation) ---
   ai: IAiService = {
     analyzeWorkItem: async () => "STUB: يتم تحليل البيانات في السيرفر فقط.",
     suggestPriority: async () => "Medium",
@@ -122,7 +124,6 @@ export class LocalStorageProvider implements IDataProvider {
     analyzeNotification: async () => ({ priority: 'normal', category: 'system' })
   };
 
-  // Remaining repositories (Inherited clean version)
   workItems: IWorkItemRepository = {
     getAll: async () => this.ensureInitialized('work_items', MOCK_WORK_ITEMS),
     getById: async (id) => (await this.workItems.getAll()).find(i => i.id === id),

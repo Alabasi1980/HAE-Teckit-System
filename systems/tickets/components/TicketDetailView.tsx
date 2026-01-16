@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { Ticket, TicketComment, CommentVisibility, TicketStatus, TicketPriority, TicketActivity } from '../../../shared/types';
 import { useData } from '../../../context/DataContext';
 import { useToast } from '../../../shared/ui/ToastProvider';
-import { X, Send, Lock, Eye, History, Sparkles, User, Clock, CheckCircle2, ChevronDown, MoreVertical, MessageSquare, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Send, Lock, Eye, History, Sparkles, User, Clock, CheckCircle2, ChevronDown, MoreVertical, MessageSquare, Loader2, AlertCircle, RefreshCw, Edit3 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import DigitalSignatureModal from './DigitalSignatureModal';
 
 interface TicketDetailViewProps {
   ticket: Ticket;
@@ -22,6 +23,7 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onClose, on
   const [isPosting, setIsPosting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
+  const [isSignModalOpen, setIsSignModalOpen] = useState(false);
 
   const currentUser = JSON.parse(localStorage.getItem('enjaz_session_user') || '{}');
   const isPrivileged = ['Project Manager', 'Supervisor', 'Admin'].includes(currentUser.role);
@@ -31,7 +33,6 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onClose, on
   const loadData = async () => {
     setLoading(true);
     try {
-      // Logic handled at Provider Level (RBAC)
       const [c, a] = await Promise.all([
         data.tickets.getComments(ticket.id),
         data.tickets.getActivities(ticket.id)
@@ -59,14 +60,35 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onClose, on
   };
 
   const handleTransition = async (status: TicketStatus) => {
+    // إذا كانت الحالة المطلوبة هي RESOLVED، نفتح المودال بدلاً من التحديث المباشر
+    if (status === TicketStatus.RESOLVED && !ticket.signatureUrl) {
+      setIsSignModalOpen(true);
+      return;
+    }
+
     try {
-      // Transition logic & validation happens inside provider
       await data.tickets.transitionStatus(ticket.id, status, "تحديث من لوحة الإدارة.");
       onRefresh();
       loadData();
       showToast(`تم تغيير الحالة إلى ${status}`, "success");
     } catch (err: any) {
       showToast(err.message, "error");
+    }
+  };
+
+  const handleSignatureSave = async (signatureUrl: string) => {
+    try {
+      // حفظ التوقيع أولاً
+      await data.tickets.update(ticket.id, { signatureUrl });
+      // ثم تغيير الحالة
+      await data.tickets.transitionStatus(ticket.id, TicketStatus.RESOLVED, "تم الحل مع إرفاق توقيع رقمي.");
+      
+      setIsSignModalOpen(false);
+      onRefresh();
+      loadData();
+      showToast("تم اعتماد الحل وحفظ التوقيع بنجاح.", "success");
+    } catch (err: any) {
+      showToast("فشل في حفظ التوقيع والاعتماد.", "error");
     }
   };
 
@@ -100,6 +122,18 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onClose, on
                  {ticket.description}
               </div>
 
+              {ticket.signatureUrl && (
+                <div className="bg-emerald-50 p-6 rounded-[2.5rem] border border-emerald-100 flex items-center justify-between shadow-sm">
+                   <div>
+                      <h4 className="font-black text-emerald-900 text-sm mb-1 flex items-center gap-2"><CheckCircle2 size={16}/> المصادقة الرقمية</h4>
+                      <p className="text-xs text-emerald-700 font-bold">تم إغلاق التذكرة بتوقيع معتمد من الموقع.</p>
+                   </div>
+                   <div className="w-32 h-16 bg-white rounded-xl border border-emerald-200 overflow-hidden">
+                      <img src={ticket.signatureUrl} alt="Signature" className="w-full h-full object-contain" />
+                   </div>
+                </div>
+              )}
+
               <div className="flex border-b border-slate-100 gap-8">
                  <button onClick={() => setActiveTab('chat')} className={`pb-4 px-2 flex items-center gap-2 text-xs font-black transition-all relative ${activeTab === 'chat' ? 'text-blue-600' : 'text-slate-400'}`}>
                     <MessageSquare size={16}/> المناقشة الفنية
@@ -132,7 +166,6 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onClose, on
                          </div>
                       </div>
                    ))}
-                   {comments.length === 0 && <p className="py-10 text-center text-slate-400 font-bold italic">لا توجد تعليقات أو ردود حالياً.</p>}
                 </div>
               ) : (
                 <div className="space-y-6 animate-fade-in pr-4 border-r-2 border-slate-100 mr-2">
@@ -157,8 +190,7 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onClose, on
                  <div className="grid grid-cols-1 gap-2">
                     <StatusBtn active={ticket.status === TicketStatus.OPEN} label="فتح التذكرة" onClick={() => handleTransition(TicketStatus.OPEN)} />
                     <StatusBtn active={ticket.status === TicketStatus.IN_PROGRESS} label="قيد المعالجة" onClick={() => handleTransition(TicketStatus.IN_PROGRESS)} />
-                    <StatusBtn active={ticket.status === TicketStatus.WAITING_CUSTOMER} label="بانتظار العميل" onClick={() => handleTransition(TicketStatus.WAITING_CUSTOMER)} />
-                    <StatusBtn active={ticket.status === TicketStatus.RESOLVED} label="تم الحل نهائياً" color="bg-emerald-600" onClick={() => handleTransition(TicketStatus.RESOLVED)} />
+                    <StatusBtn active={ticket.status === TicketStatus.RESOLVED} label="اعتماد الحل (مع توقيع)" color="bg-emerald-600" onClick={() => handleTransition(TicketStatus.RESOLVED)} />
                  </div>
               </div>
 
@@ -166,15 +198,7 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onClose, on
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">التوافق مع SLA</p>
                  <div className="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-6">
                     <SlaIndicator label="وقت الحل المستهدف" due={ticket.resolutionDueAt} />
-                    <SlaIndicator label="سرعة الاستجابة الأولى" due={ticket.firstResponseDueAt} />
                  </div>
-              </div>
-
-              <div className="p-6 bg-slate-900 rounded-3xl text-white relative overflow-hidden group">
-                 <div className="absolute top-0 left-0 p-4 opacity-10 group-hover:scale-110 transition-transform"><Sparkles size={60}/></div>
-                 <h4 className="text-sm font-black mb-2 relative z-10">مساعد إنجاز الذكي</h4>
-                 <p className="text-[10px] font-bold text-blue-200 leading-relaxed mb-4 relative z-10">اطلب من Gemini صياغة رد احترافي ومطابق لمعايير الجودة.</p>
-                 <button className="w-full py-2.5 bg-blue-600 text-white text-[10px] font-black rounded-xl hover:bg-blue-500 transition-all relative z-10">توليد رد ذكي</button>
               </div>
            </div>
         </div>
@@ -202,6 +226,13 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({ ticket, onClose, on
            </div>
         </div>
       </div>
+
+      <DigitalSignatureModal 
+        isOpen={isSignModalOpen}
+        onClose={() => setIsSignModalOpen(false)}
+        onSave={handleSignatureSave}
+        title="توقيع اعتماد الحل النهائي"
+      />
     </div>
   );
 };

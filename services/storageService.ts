@@ -5,7 +5,10 @@
  */
 
 const DB_NAME = 'EnjazOneDB';
-const DB_VERSION = 4;
+/* 
+  تنبيه: قمنا برفع الإصدار إلى 5 لضمان تفعيل onupgradeneeded وإضافة الجداول الجديدة
+*/
+const DB_VERSION = 5;
 
 // تعريف هيكل المخازن (Stores) وإعداداتها
 const STORE_CONFIGS: Record<string, IDBObjectStoreParameters> = {
@@ -18,7 +21,11 @@ const STORE_CONFIGS: Record<string, IDBObjectStoreParameters> = {
   'settings': { keyPath: 'id' },
   'users': { keyPath: 'id' },
   'documents': { keyPath: 'id' },
-  'blueprints': { keyPath: 'id' }
+  'blueprints': { keyPath: 'id' },
+  /* إضافة الجداول المفقودة لنظام التذاكر */
+  'tickets': { keyPath: 'id' },
+  'ticket_activities': { keyPath: 'id' },
+  'ticket_comments': { keyPath: 'id' }
 };
 
 export const storageService = {
@@ -46,7 +53,6 @@ export const storageService = {
 
       request.onsuccess = () => {
         this.db = request.result;
-        // لا نقوم بضبط initPromise إلى null هنا لضمان استخدام نفس النتيجة لاحقاً
         
         this.db.onversionchange = () => {
           this.db?.close();
@@ -63,7 +69,7 @@ export const storageService = {
       };
 
       request.onblocked = () => {
-        console.warn("[Storage] Database upgrade blocked.");
+        console.warn("[Storage] Database upgrade blocked. Please close other tabs.");
       };
     });
 
@@ -72,7 +78,10 @@ export const storageService = {
 
   async getAll<T>(storeName: string): Promise<T[]> {
     const db = await this.init();
-    if (!db.objectStoreNames.contains(storeName)) return [];
+    if (!db.objectStoreNames.contains(storeName)) {
+      console.error(`Store ${storeName} not found in DB`);
+      return [];
+    }
     
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(storeName, 'readonly');
@@ -86,6 +95,9 @@ export const storageService = {
 
   async put<T>(storeName: string, item: T): Promise<T> {
     const db = await this.init();
+    if (!db.objectStoreNames.contains(storeName)) {
+      throw new Error(`CRITICAL: Store ${storeName} is missing. Migration failed?`);
+    }
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(storeName, 'readwrite');
       const store = transaction.objectStore(storeName);

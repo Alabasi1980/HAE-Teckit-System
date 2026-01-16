@@ -49,6 +49,7 @@ export interface TicketActivity {
   action: string;
   details?: string;
   createdAt: string;
+  signatureUrl?: string; /* حقل التوقيع الرقمي */
 }
 
 export interface Ticket {
@@ -71,11 +72,8 @@ export interface Ticket {
   createdAt: string;
   updatedAt: string;
   tags: string[];
+  signatureUrl?: string; /* التوقيع النهائي عند الحل */
 }
-
-/* 
-  Fix: Added missing types and enums required by other modules 
-*/
 
 export enum Priority {
   CRITICAL = 'Critical',
@@ -254,9 +252,6 @@ export interface Notification {
 export type NotificationPriority = 'low' | 'normal' | 'high' | 'critical';
 export type NotificationCategory = 'system' | 'mention' | 'task' | 'approval';
 
-/**
- * Fix: Renamed Document to AppDocument to avoid collision with DOM Document
- */
 export interface AppDocument {
   id: string;
   title: string;
@@ -270,9 +265,6 @@ export interface AppDocument {
   uploadedAt: string;
 }
 
-/**
- * Fix: Renamed Article to AppArticle to avoid collision with global names
- */
 export interface AppArticle {
   id: string;
   title: string;
@@ -522,7 +514,4 @@ export interface TaskPin {
   priority: Priority;
 }
 
-/**
- * Fix: Standardized View type exported for application-wide consistency
- */
 export type View = 'dashboard' | 'ceo-board' | 'workitems' | 'tickets' | 'approvals' | 'projects' | 'field-ops' | 'project-detail' | 'documents' | 'knowledge' | 'assets' | 'inventory' | 'finance' | 'procurement' | 'hr' | 'payroll' | 'settings' | 'profile';
