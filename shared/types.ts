@@ -49,7 +49,7 @@ export interface TicketActivity {
   action: string;
   details?: string;
   createdAt: string;
-  signatureUrl?: string; /* حقل التوقيع الرقمي */
+  signatureUrl?: string;
 }
 
 export interface Ticket {
@@ -72,7 +72,7 @@ export interface Ticket {
   createdAt: string;
   updatedAt: string;
   tags: string[];
-  signatureUrl?: string; /* التوقيع النهائي عند الحل */
+  signatureUrl?: string;
 }
 
 export enum Priority {
@@ -93,10 +93,28 @@ export enum Status {
 
 export enum WorkItemType {
   TASK = 'Task',
-  APPROVAL = 'Approval Case',
-  INCIDENT = 'Incident',
-  OBSERVATION = 'Safety Observation',
-  SERVICE_REQUEST = 'Service Request'
+  APPROVAL = 'Approval',
+  ISSUE = 'Issue/Blocker',
+  FOLLOW_UP = 'Follow-up',
+  CHECKLIST = 'Checklist',
+  INCIDENT = 'Field Incident',
+  OBSERVATION = 'Safety Observation'
+}
+
+export enum RecurrenceInterval {
+  NONE = 'None',
+  DAILY = 'Daily',
+  WEEKLY = 'Weekly',
+  MONTHLY = 'Monthly'
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  managerId: string;
+  parentDeptId?: string;
+  description?: string;
+  color?: string;
 }
 
 export interface User {
@@ -106,14 +124,42 @@ export interface User {
   avatar: string;
   email?: string;
   phone?: string;
+  departmentId?: string;
   department?: string;
+  managerId?: string;
   joinDate?: string;
+  points?: number; // Added for Gamification
+}
+
+export interface ProjectStaffing {
+  userId: string;
+  projectRole: 'PM' | 'SiteEngineer' | 'Accountant' | 'SafetyOfficer' | 'Supervisor';
+  assignedAt: string;
 }
 
 export interface Subtask {
   id: string;
   title: string;
   isCompleted: boolean;
+}
+
+export interface TimeLog {
+  id: string;
+  userId: string;
+  userName: string;
+  hours: number;
+  note: string;
+  date: string;
+}
+
+export interface WorkItemAttachment {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size: string;
+  uploadedBy: string;
+  uploadedAt: string;
 }
 
 export interface Comment {
@@ -151,6 +197,8 @@ export interface WorkItem {
   status: Status;
   projectId: string;
   assigneeId?: string;
+  targetDeptId?: string;
+  targetRole?: string;
   creatorId?: string;
   createdAt: string;
   updatedAt: string;
@@ -159,10 +207,20 @@ export interface WorkItem {
   tags?: string[];
   comments: Comment[];
   subtasks?: Subtask[];
+  timeLogs?: TimeLog[];
+  itemAttachments?: WorkItemAttachment[];
   approvalChain?: ApprovalStep[];
   location?: { lat: number; lng: number };
   attachments?: string[];
   assetId?: string;
+  dependencies?: string[];
+  watchers?: string[];
+  estimatedHours?: number;
+  actualHours?: number;
+  relatedToId?: string;
+  relatedToType?: 'Project' | 'Asset' | 'Ticket' | 'Vendor' | 'Employee';
+  recurrence?: RecurrenceInterval;
+  nextOccurrenceId?: string;
 }
 
 export enum ProjectStatus {
@@ -190,6 +248,8 @@ export interface Project {
   id: string;
   name: string;
   location: string;
+  latLng?: { lat: number; lng: number }; // Added for Geofencing
+  geofenceRadius?: number; // Meters
   code: string;
   status: ProjectStatus;
   health: ProjectHealth;
@@ -199,6 +259,7 @@ export interface Project {
   endDate: string;
   managerId: string;
   teamIds: string[];
+  staffing?: ProjectStaffing[];
   version: number;
   updatedAt: string;
   milestones?: Milestone[];
@@ -280,6 +341,18 @@ export interface AutomationRule {
   name: string;
   description: string;
   isEnabled: boolean;
+  trigger: {
+    type: 'STATUS_CHANGE';
+    toStatus: Status;
+    workItemType?: WorkItemType;
+  };
+  action: {
+    type: 'CREATE_TASK';
+    titleTemplate: string;
+    descTemplate: string;
+    targetRole?: string;
+    priority: Priority;
+  };
 }
 
 export interface NotificationPreferences {
@@ -487,6 +560,19 @@ export interface Permit {
   projectId: string;
 }
 
+export interface InspectionVisit {
+  id: string;
+  projectId: string;
+  authorityName: string;
+  inspectorName?: string;
+  date: string;
+  result: 'Pass' | 'Fail' | 'Conditional';
+  infractionAmount?: number;
+  notes: string;
+  attachments?: string[];
+  remediationTaskId?: string;
+}
+
 export interface LetterOfGuarantee {
   id: string;
   bankName: string;
@@ -514,4 +600,4 @@ export interface TaskPin {
   priority: Priority;
 }
 
-export type View = 'dashboard' | 'ceo-board' | 'workitems' | 'tickets' | 'approvals' | 'projects' | 'field-ops' | 'project-detail' | 'documents' | 'knowledge' | 'assets' | 'inventory' | 'finance' | 'procurement' | 'hr' | 'payroll' | 'settings' | 'profile';
+export type View = 'dashboard' | 'ceo-board' | 'org-structure' | 'workitems' | 'workload' | 'compliance' | 'tickets' | 'approvals' | 'projects' | 'field-ops' | 'project-detail' | 'documents' | 'knowledge' | 'assets' | 'inventory' | 'finance' | 'procurement' | 'hr' | 'payroll' | 'settings' | 'profile';

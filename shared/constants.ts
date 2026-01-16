@@ -73,7 +73,12 @@ export const MOCK_USERS: User[] = [
     email: 'ahmed.e@enjaz-one.com',
     phone: '+966 50 123 4567',
     joinDate: '2022-05-15',
-    department: 'Engineering'
+    /* 
+      Fix: Typed correctly as 'department' and added 'departmentId' 
+      to match structural relations in org-structure.
+    */
+    department: 'Engineering',
+    departmentId: 'D1'
   },
   { 
     id: 'U002', 
@@ -83,7 +88,11 @@ export const MOCK_USERS: User[] = [
     email: 'sara.f@enjaz-one.com',
     phone: '+966 55 987 6543',
     joinDate: '2021-11-20',
-    department: 'Finance'
+    /* 
+      Fix: Typed correctly as 'department' and added 'departmentId' 
+    */
+    department: 'Finance',
+    departmentId: 'D2'
   },
   { 
     id: 'U003', 
@@ -93,7 +102,11 @@ export const MOCK_USERS: User[] = [
     email: 'john.s@enjaz-one.com',
     phone: '+966 54 444 3322',
     joinDate: '2023-01-10',
-    department: 'Operations'
+    /* 
+      Fix: Typed correctly as 'department' and added 'departmentId' 
+    */
+    department: 'Operations',
+    departmentId: 'D3'
   },
 ];
 

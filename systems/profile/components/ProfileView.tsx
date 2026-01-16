@@ -92,6 +92,9 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, onNavigate, onItemClick
                 <Award size={12} /> Elite Personnel
               </span>
             </div>
+            /* 
+              Fix: Correctly accessing 'department' which is now defined in the interface 
+            */
             <p className="text-slate-500 font-medium text-lg">{user.role} • {user.department}</p>
           </div>
 

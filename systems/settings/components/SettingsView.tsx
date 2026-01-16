@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { useData } from '../../../context/DataContext';
-import { AutomationRule, NotificationPreferences } from '../../../shared/types';
+import { AutomationRule, NotificationPreferences, Status, WorkItemType } from '../../../shared/types';
 import { 
   Zap, Shield, ToggleLeft, ToggleRight, Settings as SettingsIcon, 
   Sparkles, Globe, ShieldAlert, Cpu, Database, Save, RefreshCcw, CheckCircle2,
-  Lock, Calendar, DollarSign, BellRing, Smartphone, Mail, Moon, Clock
+  Lock, Calendar, DollarSign, BellRing, Smartphone, Mail, Moon, Clock, Plus, Trash2
 } from 'lucide-react';
 
 type Tab = 'automation' | 'ai' | 'notifications' | 'regional' | 'security';
@@ -23,12 +24,19 @@ const SettingsView: React.FC = () => {
   });
 
   useEffect(() => {
-    setRules(data.automation.getRules());
+    data.automation.getRules().then(setRules);
     setNotifPrefs(data.notifications.getPreferences());
   }, [data]);
 
-  const handleToggleRule = (id: string) => {
-    const updated = data.automation.toggleRule(id);
+  const handleToggleRule = async (id: string) => {
+    const updated = await data.automation.toggleRule(id);
+    setRules([...updated]);
+  };
+
+  const handleDeleteRule = async (id: string) => {
+    if(!window.confirm("هل أنت متأكد من حذف هذه القاعدة؟")) return;
+    await data.automation.deleteRule(id);
+    const updated = await data.automation.getRules();
     setRules(updated);
   };
 
@@ -84,31 +92,53 @@ const SettingsView: React.FC = () => {
       </div>
 
       <div className="bg-white p-2 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-wrap gap-2 w-full md:w-fit overflow-x-auto no-scrollbar">
-        <TabButton active={activeTab === 'automation'} onClick={() => setActiveTab('automation')} icon={<Zap size={18}/>} label="محرك الأتمتة" />
-        <TabButton active={activeTab === 'ai'} onClick={() => setActiveTab('ai')} icon={<Cpu size={18}/>} label="تكوين AI" />
-        <TabButton active={activeTab === 'notifications'} onClick={() => setActiveTab('notifications')} icon={<BellRing size={18}/>} label="الإشعارات الذكية" />
-        <TabButton active={activeTab === 'regional'} onClick={() => setActiveTab('regional')} icon={<Globe size={18}/>} label="التفضيلات" />
-        <TabButton active={activeTab === 'security'} onClick={() => setActiveTab('security')} icon={<Shield size={18}/>} label="الأمن" />
+        <TabButton active={activeTab === 'automation'} onClick={() => setActiveTab('automation'} icon={<Zap size={18}/>} label="محرك الأتمتة" />
+        <TabButton active={activeTab === 'ai'} onClick={() => setActiveTab('ai'} icon={<Cpu size={18}/>} label="تكوين AI" />
+        <TabButton active={activeTab === 'notifications'} onClick={() => setActiveTab('notifications'} icon={<BellRing size={18}/>} label="الإشعارات الذكية" />
+        <TabButton active={activeTab === 'regional'} onClick={() => setActiveTab('regional'} icon={<Globe size={18}/>} label="التفضيلات" />
+        <TabButton active={activeTab === 'security'} onClick={() => setActiveTab('security'} icon={<Shield size={18}/>} label="الأمن" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           {activeTab === 'automation' && (
-            <div className="space-y-4 animate-slide-in-up">
+            <div className="space-y-6 animate-slide-in-up">
+              <div className="flex justify-between items-center px-2">
+                 <h3 className="font-black text-slate-800">قواعد سير العمل النشطة</h3>
+                 <button className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-black hover:bg-blue-600 hover:text-white transition-all">
+                    <Plus size={14}/> إضافة قاعدة
+                 </button>
+              </div>
               {rules.map(rule => (
-                <div key={rule.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group flex items-start justify-between">
-                  <div className="flex gap-5">
-                    <div className={`p-4 rounded-3xl transition-colors ${rule.isEnabled ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400'}`}>
-                      <Zap size={24} />
+                <div key={rule.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="flex gap-5">
+                      <div className={`p-4 rounded-3xl transition-colors ${rule.isEnabled ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-slate-100 text-slate-400'}`}>
+                        <Zap size={24} />
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-black text-slate-800">{rule.name}</h4>
+                        <p className="text-sm text-slate-400 font-bold mt-1">{rule.description}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-lg font-black text-slate-800">{rule.name}</h4>
-                      <p className="text-sm text-slate-500 font-bold mt-1 max-w-lg leading-relaxed">{rule.description}</p>
+                    <div className="flex items-center gap-4">
+                       <button onClick={() => handleDeleteRule(rule.id)} className="p-2 text-slate-300 hover:text-rose-600 transition-colors"><Trash2 size={18}/></button>
+                       <button onClick={() => handleToggleRule(rule.id)} className={`transition-all ${rule.isEnabled ? 'text-blue-600' : 'text-slate-300'}`}>
+                         {rule.isEnabled ? <ToggleRight size={48} /> : <ToggleLeft size={48} />}
+                       </button>
                     </div>
                   </div>
-                  <button onClick={() => handleToggleRule(rule.id)} className={`transition-all ${rule.isEnabled ? 'text-blue-600' : 'text-slate-300'}`}>
-                    {rule.isEnabled ? <ToggleRight size={48} /> : <ToggleLeft size={48} />}
-                  </button>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 border-t border-slate-50">
+                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">المحفز (Trigger)</p>
+                        <p className="text-xs font-black text-slate-700">تغيير الحالة إلى: <span className="text-blue-600">{rule.trigger.toStatus}</span></p>
+                     </div>
+                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">الإجراء (Action)</p>
+                        <p className="text-xs font-black text-slate-700">إنشاء مهمة: <span className="text-indigo-600">{rule.action.titleTemplate}</span></p>
+                     </div>
+                  </div>
                 </div>
               ))}
             </div>

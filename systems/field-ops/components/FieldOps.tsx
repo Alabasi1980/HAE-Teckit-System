@@ -57,7 +57,10 @@ const FieldOps: React.FC<FieldOpsProps> = ({ projects, onSubmit }) => {
     // Simulated scanning process
     setTimeout(() => {
        showToast("تم التعرف على المعدة: CAT-320 Excavator", "success");
-       setFormType(WorkItemType.SERVICE_REQUEST);
+       /* 
+         Fix: WorkItemType.SERVICE_REQUEST does not exist, using WorkItemType.TASK 
+       */
+       setFormType(WorkItemType.TASK);
        setTitle("صيانة دورية: حفار رقم 99");
        setMode('form');
     }, 2000);

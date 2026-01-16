@@ -1,6 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { DailyLog, Project, WorkItem, Status, Asset, AssetCategory, Material } from '../../../shared/types';
+/* 
+  Fix: Added missing WorkItemType to imports from shared/types 
+*/
+import { DailyLog, Project, WorkItem, Status, Asset, AssetCategory, Material, WorkItemType } from '../../../shared/types';
 import { useData } from '../../../context/DataContext';
 import { useToast } from '../../../shared/ui/ToastProvider';
 import { 
@@ -71,7 +74,10 @@ const DailyLogView: React.FC<DailyLogViewProps> = ({ project }) => {
         content: reportContent,
         stats: {
           tasksCompleted: projectItems.filter(i => i.status === Status.DONE).length,
-          incidentsReported: projectItems.filter(i => i.type === 'Incident').length,
+          /* 
+            Fix: Changed 'Incident' to WorkItemType.INCIDENT 
+          */
+          incidentsReported: projectItems.filter(i => i.type === WorkItemType.INCIDENT).length,
           materialsRequested: 3
         },
         createdBy: "Gemini AI Analytics",

@@ -1,15 +1,13 @@
 
 import React from 'react';
-/* 
-  Fix: Added missing Lucide icons and other required imports 
-*/
 import { 
   LayoutDashboard, HardHat, ListTodo, ShieldCheck, 
   Zap, Building2, Package, Wallet, Users, 
-  FileText, BookOpen, Settings, UserCircle, LogOut, TicketCheck, ChevronLeft
+  FileText, BookOpen, Settings, UserCircle, LogOut, TicketCheck, ChevronLeft,
+  Network, Scale, Landmark
 } from 'lucide-react';
 import { authService } from '../../auth';
-import { View } from '../../../shared/types'; // Updated: Import View
+import { View } from '../../../shared/types';
 
 interface SidebarProps {
   currentView: View;
@@ -19,9 +17,6 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, isOpen, setIsOpen }) => {
-  /* 
-    Fix: Re-defined systems array correctly to avoid left-side comma errors 
-  */
   const systems = [
     {
       id: 'core',
@@ -29,6 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, isOpen, 
       icon: LayoutDashboard,
       actions: [
         { id: 'dash', label: 'لوحة التحكم', icon: LayoutDashboard, view: 'dashboard' as View },
+        { id: 'org', label: 'الهيكل التنظيمي', icon: Network, view: 'org-structure' as View },
       ]
     },
     {
@@ -37,6 +33,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, isOpen, 
       icon: HardHat,
       actions: [
         { id: 'ops-daily', label: 'مركز العمليات', icon: ListTodo, view: 'workitems' as View },
+        { id: 'ops-load', label: 'موازن ضغط العمل', icon: Scale, view: 'workload' as View },
+        { id: 'ops-comp', label: 'مركز الامتثال', icon: Landmark, view: 'compliance' as View },
         { id: 'ops-tickets', label: 'مركز التذاكر', icon: TicketCheck, view: 'tickets' as View },
         { id: 'ops-appr', label: 'مركز الاعتمادات', icon: ShieldCheck, view: 'approvals' as View },
         { id: 'fld-gate', label: 'بوابة الميدان', icon: Zap, view: 'field-ops' as View },

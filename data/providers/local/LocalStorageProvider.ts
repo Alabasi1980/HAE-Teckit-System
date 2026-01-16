@@ -1,8 +1,19 @@
 
-import { IDataProvider, ITicketsRepository, IWorkItemRepository, IProjectRepository, IUserRepository, INotificationRepository, IAiService, IAssetRepository, IDocumentRepository, IKnowledgeRepository, IFieldOpsRepository, IAutomationRepository, IMaterialRepository, IDailyLogRepository, IEmployeeRepository, IPayrollRepository, IVendorRepository, IProcurementRepository, IStakeholderRepository } from '../../contracts';
-import { Ticket, TicketStatus, TicketPriority, TicketType, TicketComment, CommentVisibility, TicketActivity, WorkItem, Project, User, Notification, Asset, AppDocument, AppArticle, Material, DailyLog, Employee, PayrollRecord, Vendor, PurchaseOrder, Contract, PettyCashRecord, Client, ChangeOrder, Rfi, MaterialSubmittal, Subcontractor, PaymentCertificate, Ncr, Permit, LetterOfGuarantee, Blueprint, TaskPin, StockMovement } from '../../../shared/types';
+import { IDataProvider, ITicketsRepository, IWorkItemRepository, IProjectRepository, IUserRepository, INotificationRepository, IAiService, IAssetRepository, IDocumentRepository, IKnowledgeRepository, IFieldOpsRepository, IAutomationRepository, IMaterialRepository, IDailyLogRepository, IEmployeeRepository, IPayrollRepository, IVendorRepository, IProcurementRepository, IStakeholderRepository, IComplianceRepository } from '../../contracts';
+import { Ticket, TicketStatus, TicketPriority, TicketType, TicketComment, CommentVisibility, TicketActivity, WorkItem, Project, User, Notification, Asset, AppDocument, AppArticle, Material, DailyLog, Employee, PayrollRecord, Vendor, PurchaseOrder, Contract, PettyCashRecord, Client, ChangeOrder, Rfi, MaterialSubmittal, Subcontractor, PaymentCertificate, Ncr, Permit, LetterOfGuarantee, Blueprint, TaskPin, StockMovement, AutomationRule, Status, Priority, InspectionVisit } from '../../../shared/types';
 import { storageService } from '../../../services/storageService';
 import { MOCK_USERS, MOCK_PROJECTS, MOCK_WORK_ITEMS, MOCK_ASSETS, MOCK_ARTICLES } from '../../../shared/constants';
+
+const DEFAULT_AUTOMATIONS: AutomationRule[] = [
+  {
+    id: 'AUTO-001',
+    name: 'أتمتة جودة الخرسانة',
+    description: 'عند الانتهاء من حفر القواعد، أنشئ تلقائياً مهمة طلب صب الخرسانة.',
+    isEnabled: true,
+    trigger: { type: 'STATUS_CHANGE', toStatus: Status.DONE },
+    action: { type: 'CREATE_TASK', titleTemplate: 'طلب صب خرسانة: {title}', descTemplate: 'بناءً على اكتمال الحفر، يرجى طلب الخرسانة للموقع.', priority: Priority.HIGH }
+  }
+];
 
 export class LocalStorageProvider implements IDataProvider {
   private async ensureInitialized<T>(storeName: string, defaults: T[]): Promise<T[]> {
@@ -109,7 +120,7 @@ export class LocalStorageProvider implements IDataProvider {
         action: 'تغيير الحالة', 
         details: `تم تغيير الحالة من ${oldStatus} إلى ${nextStatus}. ${comment || ''}`,
         createdAt: new Date().toISOString(),
-        signatureUrl: ticket.signatureUrl // إدراج التوقيع في سجل النشاط إذا وجد
+        signatureUrl: ticket.signatureUrl
       });
     }
   };
@@ -170,6 +181,18 @@ export class LocalStorageProvider implements IDataProvider {
        const user = (await this.users.getAll()).find(u => u.id === id);
        if(user) localStorage.setItem('enjaz_session_user', JSON.stringify(user));
        return user;
+    },
+    updatePoints: async (id, pointsToAdd) => {
+       const user = (await this.users.getAll()).find(u => u.id === id);
+       if(!user) return null;
+       const updated = { ...user, points: (user.points || 0) + pointsToAdd };
+       await storageService.put('users', updated);
+       // تحديث الجلسة الحالية إذا كان هو نفس المستخدم
+       const current = JSON.parse(localStorage.getItem('enjaz_session_user') || '{}');
+       if (current.id === id) {
+          localStorage.setItem('enjaz_session_user', JSON.stringify(updated));
+       }
+       return updated;
     }
   };
   assets: IAssetRepository = {
@@ -293,6 +316,16 @@ export class LocalStorageProvider implements IDataProvider {
      getPermits: async (pid) => (await storageService.getAll<Permit>('permits')).filter(p => p.projectId === pid),
      getLGs: async (pid) => (await storageService.getAll<LetterOfGuarantee>('lgs')).filter(l => l.projectId === pid)
   };
+  compliance: IComplianceRepository = {
+     getVisits: async (pid) => (await storageService.getAll<InspectionVisit>('visits')).filter(v => !pid || v.projectId === pid),
+     addVisit: async (v) => storageService.put('visits', { ...v, id: `VST-${Date.now()}` } as InspectionVisit),
+     getPermits: async (pid) => this.stakeholders.getPermits(pid || ''),
+     updatePermitStatus: async (id, status) => {
+        const permits = await storageService.getAll<Permit>('permits');
+        const p = permits.find(x => x.id === id);
+        if(p) await storageService.put('permits', { ...p, status: status as any });
+     }
+  };
   documents: IDocumentRepository = {
      getAll: async () => storageService.getAll<AppDocument>('documents'),
      getByProjectId: async (pid) => (await storageService.getAll<AppDocument>('documents')).filter(d => d.projectId === pid),
@@ -326,8 +359,23 @@ export class LocalStorageProvider implements IDataProvider {
      savePreferences: async (prefs) => { localStorage.setItem('notif_prefs', JSON.stringify(prefs)); }
   };
   automation: IAutomationRepository = {
-     getRules: () => [],
-     toggleRule: (id) => []
+     getRules: async () => this.ensureInitialized<AutomationRule>('automation_rules', DEFAULT_AUTOMATIONS),
+     toggleRule: async (id) => {
+        const rules = await this.automation.getRules();
+        const rule = rules.find(r => r.id === id);
+        if(rule) {
+           rule.isEnabled = !rule.isEnabled;
+           await storageService.put('automation_rules', rule);
+        }
+        return rules;
+     },
+     addRule: async (rule) => {
+        const newRule = { ...rule, id: `AUTO-${Date.now()}`, isEnabled: true } as AutomationRule;
+        return storageService.put('automation_rules', newRule);
+     },
+     deleteRule: async (id) => {
+        await storageService.delete('automation_rules', id);
+     }
   };
   fieldOps: IFieldOpsRepository = {
      getDrafts: async () => storageService.getAll('field_drafts'),

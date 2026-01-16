@@ -6,9 +6,9 @@
 
 const DB_NAME = 'EnjazOneDB';
 /* 
-  تنبيه: قمنا برفع الإصدار إلى 5 لضمان تفعيل onupgradeneeded وإضافة الجداول الجديدة
+  تنبيه: قمنا برفع الإصدار إلى 7 لإضافة جدول automation_rules المفقود وتصحيح خطأ Migration
 */
-const DB_VERSION = 5;
+const DB_VERSION = 7;
 
 // تعريف هيكل المخازن (Stores) وإعداداتها
 const STORE_CONFIGS: Record<string, IDBObjectStoreParameters> = {
@@ -22,10 +22,34 @@ const STORE_CONFIGS: Record<string, IDBObjectStoreParameters> = {
   'users': { keyPath: 'id' },
   'documents': { keyPath: 'id' },
   'blueprints': { keyPath: 'id' },
-  /* إضافة الجداول المفقودة لنظام التذاكر */
+  'automation_rules': { keyPath: 'id' }, // إضافة المخزن المفقود هنا
+  
+  /* نظام التذاكر */
   'tickets': { keyPath: 'id' },
   'ticket_activities': { keyPath: 'id' },
-  'ticket_comments': { keyPath: 'id' }
+  'ticket_comments': { keyPath: 'id' },
+
+  /* الأنظمة التشغيلية والمالية */
+  'materials': { keyPath: 'id' },
+  'stock_movements': { keyPath: 'id' },
+  'daily_logs': { keyPath: 'id' },
+  'employees': { keyPath: 'id' },
+  'payroll': { keyPath: 'id' },
+  'vendors': { keyPath: 'id' },
+  'pos': { keyPath: 'id' },
+  'contracts': { keyPath: 'id' },
+  'petty_cash': { keyPath: 'id' },
+  
+  /* أطراف المشروع (Stakeholders) */
+  'clients': { keyPath: 'id' },
+  'cos': { keyPath: 'id' },
+  'rfis': { keyPath: 'id' },
+  'submittals': { keyPath: 'id' },
+  'subs': { keyPath: 'id' },
+  'certs': { keyPath: 'id' },
+  'ncrs': { keyPath: 'id' },
+  'permits': { keyPath: 'id' },
+  'lgs': { keyPath: 'id' }
 };
 
 export const storageService = {

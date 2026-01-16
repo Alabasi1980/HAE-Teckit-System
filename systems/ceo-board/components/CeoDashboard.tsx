@@ -1,5 +1,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
+/* 
+  Fix: Import WorkItemType and Status from shared/types 
+*/
+import { WorkItemType, Status } from '../../../shared/types';
 import { useData } from '../../../context/DataContext';
 import { 
   Crown, Sparkles, TrendingUp, ShieldCheck, 
@@ -56,8 +60,11 @@ const CeoDashboard: React.FC = () => {
         totalSpent: spent,
         staffCount: users.length,
         vendorCount: vendors.length,
-        openNCRs: items.filter(i => i.type === 'Safety Observation' && i.status === 'Open').length,
-        pendingRFIs: items.filter(i => i.type === 'Approval Case' && i.status === 'Pending Approval').length,
+        /* 
+          Fix: Using WorkItemType and Status enums for comparisons 
+        */
+        openNCRs: items.filter(i => i.type === WorkItemType.OBSERVATION && i.status === Status.OPEN).length,
+        pendingRFIs: items.filter(i => i.type === WorkItemType.APPROVAL && i.status === Status.PENDING_APPROVAL).length,
         activeBonds: 4, // Mock
         expiringPermits: 2 // Mock
       });

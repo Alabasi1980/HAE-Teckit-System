@@ -6,15 +6,16 @@ import ProjectOverview from './components/ProjectOverview';
 import ProjectDocuments from './components/ProjectDocuments';
 import ProjectAssets from './components/ProjectAssets';
 import ProjectSettings from './components/ProjectSettings';
+import ProjectTeamStructure from './components/ProjectTeamStructure'; // New
 import ClientPortalView from './components/ClientPortalView';
 import ConsultantPortalView from './components/ConsultantPortalView';
 import SubcontractorPortalView from './components/SubcontractorPortalView'; 
 import RegulatoryComplianceView from './components/RegulatoryComplianceView';
 import BondsAndInsuranceView from '../finance/components/BondsAndInsuranceView';
-import BlueprintCenter from './components/BlueprintCenter'; // New
+import BlueprintCenter from './components/BlueprintCenter'; 
 import { DailyLogView } from '../daily-log'; 
 import { useData } from '../../context/DataContext';
-import { Building2, MapPin, ArrowLeft, Settings, Calendar, ShieldCheck, Users, Mail, Phone, Plus, Trash2, X, Search, Check, FileText, UserCircle, ShieldAlert, Briefcase, Landmark, Shield, Map as MapIcon } from 'lucide-react';
+import { Building2, MapPin, ArrowLeft, Settings, Calendar, ShieldCheck, Users, Mail, Phone, Plus, Trash2, X, Search, Check, FileText, UserCircle, ShieldAlert, Briefcase, Landmark, Shield, Map as MapIcon, Network } from 'lucide-react';
 
 interface ProjectDetailProps {
   project: Project;
@@ -22,11 +23,12 @@ interface ProjectDetailProps {
   onBack: () => void;
   onItemClick: (item: WorkItem) => void;
   onNavigate: (view: any) => void;
+  onOpenCreate?: () => void;
 }
 
-const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, items, onBack, onItemClick, onNavigate }) => {
+const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, items, onBack, onItemClick, onNavigate, onOpenCreate }) => {
   const data = useData();
-  const [tab, setTab] = useState<'overview' | 'workitems' | 'logs' | 'docs' | 'assets' | 'team' | 'settings' | 'client' | 'consultant' | 'sub' | 'regulatory' | 'finance' | 'blueprint'>('overview');
+  const [tab, setTab] = useState<'overview' | 'workitems' | 'logs' | 'docs' | 'assets' | 'team' | 'settings' | 'client' | 'consultant' | 'sub' | 'regulatory' | 'finance' | 'blueprint' | 'structure'>('overview');
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -127,12 +129,12 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, items, onBack, o
       <div className="bg-white/50 p-1.5 rounded-3xl border border-slate-200 flex w-full md:w-fit self-center lg:self-start overflow-x-auto no-scrollbar shrink-0">
          {[
            { id: 'overview', label: 'Overview', icon: ShieldCheck },
-           { id: 'blueprint', label: 'Digital Twin', icon: MapIcon }, // New
+           { id: 'structure', label: 'Hierarchy', icon: Network }, // New
+           { id: 'blueprint', label: 'Digital Twin', icon: MapIcon },
            { id: 'workitems', label: 'Operations', icon: Settings },
            { id: 'logs', label: 'Daily Logs', icon: FileText },
            { id: 'docs', label: 'Documents', icon: Building2 },
-           { id: 'assets', label: 'Assets', icon: Building2 },
-           { id: 'team', label: 'Team', icon: Users },
+           { id: 'team', label: 'Staffing', icon: Users },
          ].map((t) => (
            <button
              key={t.id}
@@ -154,7 +156,11 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, items, onBack, o
             onItemClick={onItemClick}
             onSwitchTab={setTab as any}
             onManageTeam={() => setTab('team')}
+            onOpenCreate={onOpenCreate}
           />
+        )}
+        {tab === 'structure' && (
+           <ProjectTeamStructure project={project} users={allUsers} />
         )}
         {tab === 'blueprint' && (
            <BlueprintCenter 
@@ -165,7 +171,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, items, onBack, o
              }}
            />
         )}
-        {tab === 'workitems' && <WorkItemList items={items} onItemClick={onItemClick} />}
+        {tab === 'workitems' && <WorkItemList items={items} onItemClick={onItemClick} onOpenCreate={onOpenCreate} />}
         {tab === 'logs' && <DailyLogView project={project} />}
         {tab === 'docs' && <ProjectDocuments project={project} />}
         {tab === 'assets' && <ProjectAssets />}
@@ -207,6 +213,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, items, onBack, o
                     <div className="space-y-1">
                        <h4 className="text-lg font-black text-slate-900">{member.name}</h4>
                        <p className="text-xs font-bold text-blue-600 uppercase tracking-widest">{member.role}</p>
+                       /* 
+                         Fix: Accessing correctly typed 'department' property 
+                       */
                        <p className="text-xs font-bold text-slate-400">{member.department}</p>
                     </div>
                     <div className="mt-6 pt-6 border-t border-slate-50 flex flex-col gap-3">

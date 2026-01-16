@@ -1,5 +1,5 @@
 
-import { Ticket, TicketComment, TicketActivity, TicketStatus, TicketPriority, WorkItem, Project, User, Asset, Material, StockMovement, DailyLog, Employee, PayrollRecord, Vendor, PurchaseOrder, Contract, Client, ChangeOrder, Rfi, MaterialSubmittal, Subcontractor, PaymentCertificate, Ncr, Permit, LetterOfGuarantee, Blueprint, TaskPin, Notification, NotificationPreferences, AutomationRule, AppDocument, AppArticle, PettyCashRecord } from '../shared/types'; // Updated imports
+import { Ticket, TicketComment, TicketActivity, TicketStatus, TicketPriority, WorkItem, Project, User, Asset, Material, StockMovement, DailyLog, Employee, PayrollRecord, Vendor, PurchaseOrder, Contract, Client, ChangeOrder, Rfi, MaterialSubmittal, Subcontractor, PaymentCertificate, Ncr, Permit, LetterOfGuarantee, Blueprint, TaskPin, Notification, NotificationPreferences, AutomationRule, AppDocument, AppArticle, PettyCashRecord, InspectionVisit } from '../shared/types';
 
 export interface ITicketsRepository {
   getAll(filters?: any): Promise<Ticket[]>;
@@ -32,6 +32,7 @@ export interface IUserRepository {
   getAll(force?: boolean): Promise<User[]>;
   getCurrentUser(): Promise<User>;
   setCurrentUser(id: string): Promise<User | undefined>;
+  updatePoints(id: string, pointsToAdd: number): Promise<User | null>; // إضافة هذه الدالة
 }
 
 export interface INotificationRepository {
@@ -63,18 +64,18 @@ export interface IAssetRepository {
 }
 
 export interface IDocumentRepository {
-  getAll(): Promise<AppDocument[]>; // Updated: Use AppDocument
-  getByProjectId(pid: string): Promise<AppDocument[]>; // Updated: Use AppDocument
-  upload(d: Partial<AppDocument>): Promise<AppDocument>; // Updated: Use AppDocument
+  getAll(): Promise<AppDocument[]>;
+  getByProjectId(pid: string): Promise<AppDocument[]>;
+  upload(d: Partial<AppDocument>): Promise<AppDocument>;
   delete(id: string): Promise<void>;
   getBlueprints(projectId: string): Promise<Blueprint[]>;
   updateBlueprintPins(id: string, pins: TaskPin[]): Promise<void>;
 }
 
 export interface IKnowledgeRepository {
-  getAll(): Promise<AppArticle[]>; // Updated: Use AppArticle
-  search(q: string): Promise<AppArticle[]>; // Updated: Use AppArticle
-  create(a: Partial<AppArticle>): Promise<AppArticle>; // Updated: Use AppArticle
+  getAll(): Promise<AppArticle[]>;
+  search(q: string): Promise<AppArticle[]>;
+  create(a: Partial<AppArticle>): Promise<AppArticle>;
 }
 
 export interface IFieldOpsRepository {
@@ -85,8 +86,17 @@ export interface IFieldOpsRepository {
 }
 
 export interface IAutomationRepository {
-  getRules(): AutomationRule[];
-  toggleRule(id: string): AutomationRule[];
+  getRules(): Promise<AutomationRule[]>;
+  toggleRule(id: string): Promise<AutomationRule[]>;
+  addRule(rule: Partial<AutomationRule>): Promise<AutomationRule>;
+  deleteRule(id: string): Promise<void>;
+}
+
+export interface IComplianceRepository {
+  getVisits(projectId?: string): Promise<InspectionVisit[]>;
+  addVisit(visit: Partial<InspectionVisit>): Promise<InspectionVisit>;
+  getPermits(projectId?: string): Promise<Permit[]>;
+  updatePermitStatus(id: string, status: string): Promise<void>;
 }
 
 export interface IMaterialRepository {
@@ -132,8 +142,8 @@ export interface IProcurementRepository {
   updatePOStatus(id: string, status: string): Promise<void>;
   getContracts(projectId?: string): Promise<Contract[]>;
   createContract(contract: Partial<Contract>): Promise<Contract>;
-  getPettyCashRecords(projectId: string): Promise<PettyCashRecord[]>; // Updated: Import PettyCashRecord
-  addPettyCashEntry(entry: Partial<PettyCashRecord>): Promise<PettyCashRecord>; // Updated: Import PettyCashRecord
+  getPettyCashRecords(projectId: string): Promise<PettyCashRecord[]>;
+  addPettyCashEntry(entry: Partial<PettyCashRecord>): Promise<PettyCashRecord>;
 }
 
 export interface IStakeholderRepository {
@@ -175,6 +185,7 @@ export interface IDataProvider {
   knowledge: IKnowledgeRepository;
   notifications: INotificationRepository;
   automation: IAutomationRepository;
+  compliance: IComplianceRepository;
   fieldOps: IFieldOpsRepository;
   ai: IAiService;
   tickets: ITicketsRepository;

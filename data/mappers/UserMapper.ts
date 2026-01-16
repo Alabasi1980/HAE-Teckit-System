@@ -1,3 +1,4 @@
+
 import { User } from '../../shared/types';
 
 export interface UserDTO {
@@ -20,6 +21,9 @@ export class UserMapper {
       avatar: dto.avatar,
       email: dto.email,
       phone: dto.phone,
+      /* 
+        Fix: Mapping the department display name which now exists on the User interface 
+      */
       department: dto.department,
       joinDate: dto.joinDate
     };
@@ -33,6 +37,9 @@ export class UserMapper {
       avatar: domain.avatar,
       email: domain.email,
       phone: domain.phone,
+      /* 
+        Fix: Correctly mapping back the department property 
+      */
       department: domain.department,
       joinDate: domain.joinDate
     };

@@ -3,7 +3,7 @@ import {
   IDataProvider, IWorkItemRepository, IProjectRepository, IUserRepository, INotificationRepository, IAiService, 
   IAssetRepository, IDocumentRepository, IKnowledgeRepository, IFieldOpsRepository, IAutomationRepository, 
   IMaterialRepository, IDailyLogRepository, IEmployeeRepository, IPayrollRepository, IVendorRepository, 
-  IProcurementRepository, ITicketsRepository, IStakeholderRepository
+  IProcurementRepository, ITicketsRepository, IStakeholderRepository, IComplianceRepository
 } from '../../contracts';
 import { WorkItemMapper } from '../../mappers/WorkItemMapper';
 import { ProjectMapper } from '../../mappers/ProjectMapper';
@@ -20,7 +20,7 @@ import { geminiService } from '../../../services/GeminiAiService';
 /**
  * @class HttpApiProvider
  * @description يمنع هذا المزود أي عودة للبيانات المحلية (No Fallbacks).
- * إذا لم يوفر الـ Backend نقطة نهاية، سيتوقف النظام عن العمل لتنبيه المطور بالخلل.
+ * إذا لم يوفر الـ Backend نقطة نهاية، sيتوقف النظام عن العمل لتنبيه المطور بالخلل.
  */
 export class HttpApiProvider implements IDataProvider {
   
@@ -58,6 +58,10 @@ export class HttpApiProvider implements IDataProvider {
     getAll: async () => (await httpClient.get<any[]>('/users')).map(UserMapper.toDomain),
     getCurrentUser: async () => UserMapper.toDomain(await httpClient.get<any>('/users/me')),
     setCurrentUser: async (id) => UserMapper.toDomain(await httpClient.post<any>(`/users/session`, { id })),
+    /* 
+      Fix: Added missing updatePoints method to satisfy IUserRepository interface 
+    */
+    updatePoints: async (id, pointsToAdd) => UserMapper.toDomain(await httpClient.patch<any>(`/users/${id}/points`, { pointsToAdd })),
   };
 
   assets: IAssetRepository = {
@@ -137,6 +141,16 @@ export class HttpApiProvider implements IDataProvider {
     getLGs: async (pid) => await httpClient.get(`/lgs?projectId=${pid}`)
   };
 
+  /* 
+    Fix: Added missing compliance repository implementation to correctly implement IDataProvider 
+  */
+  compliance: IComplianceRepository = {
+    getVisits: async (pid) => await httpClient.get(`/compliance/visits${pid ? `?projectId=${pid}` : ''}`),
+    addVisit: async (v) => await httpClient.post('/compliance/visits', v),
+    getPermits: async (pid) => await httpClient.get(`/compliance/permits${pid ? `?projectId=${pid}` : ''}`),
+    updatePermitStatus: async (id, status) => { await httpClient.patch(`/compliance/permits/${id}/status`, { status }); }
+  };
+
   documents: IDocumentRepository = {
     getAll: async () => await httpClient.get('/documents'),
     getByProjectId: async (pid) => await httpClient.get(`/documents/project/${pid}`),
@@ -165,7 +179,15 @@ export class HttpApiProvider implements IDataProvider {
 
   automation: IAutomationRepository = {
     getRules: () => { throw new Error("Automation Rules are Server-Authoritative. Access denied via local shim."); },
-    toggleRule: (id) => { throw new Error("Unauthorized context."); }
+    toggleRule: (id) => { throw new Error("Unauthorized context."); },
+    /* 
+      Fix: Added missing addRule method to satisfy IAutomationRepository interface 
+    */
+    addRule: (rule) => { throw new Error("Automation Rules are Server-Authoritative."); },
+    /* 
+      Fix: Added missing deleteRule method to satisfy IAutomationRepository interface 
+    */
+    deleteRule: (id) => { throw new Error("Automation Rules are Server-Authoritative."); }
   };
 
   fieldOps: IFieldOpsRepository = {

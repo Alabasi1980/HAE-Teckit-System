@@ -1,7 +1,8 @@
+
 import React, { useMemo } from 'react';
 import { WorkItem, Status, Project, ProjectHealth } from '../../../shared/types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { FileText, TrendingUp, AlertCircle, DollarSign, Calendar, Users, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
+import { FileText, TrendingUp, AlertCircle, DollarSign, Calendar, Users, ChevronRight, CheckCircle2, Clock, Plus } from 'lucide-react';
 
 interface ProjectOverviewProps {
   project: Project;
@@ -9,9 +10,10 @@ interface ProjectOverviewProps {
   onItemClick: (item: WorkItem) => void;
   onSwitchTab: (tab: 'workitems' | 'docs' | 'assets' | 'team') => void;
   onManageTeam: () => void;
+  onOpenCreate?: () => void; // Added: For contextual creation
 }
 
-const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project, items, onItemClick, onSwitchTab, onManageTeam }) => {
+const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project, items, onItemClick, onSwitchTab, onManageTeam, onOpenCreate }) => {
   const stats = useMemo(() => ({
     total: items.length,
     completed: items.filter(i => i.status === Status.DONE || i.status === Status.APPROVED).length,
@@ -35,7 +37,8 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project, items, onIte
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in" dir="rtl">
+      {/* Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => onSwitchTab('workitems')}>
           <div className="flex items-center justify-between mb-3">
@@ -45,7 +48,7 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project, items, onIte
             </span>
           </div>
           <p className="text-2xl font-black text-slate-900">{completionRate}%</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Overall Progress</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">إجمالي التقدم</p>
         </div>
 
         <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
@@ -54,7 +57,7 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project, items, onIte
             <span className="text-[10px] font-bold text-slate-400">{budgetUsage}% Used</span>
           </div>
           <p className="text-2xl font-black text-slate-900">${(project.spent / 1000000).toFixed(1)}M</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Actual Expenditure</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">الإنفاق الفعلي</p>
         </div>
 
         <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => onSwitchTab('workitems')}>
@@ -63,7 +66,7 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project, items, onIte
             <span className="text-[10px] font-bold text-slate-400">{stats.open} Active</span>
           </div>
           <p className="text-2xl font-black text-slate-900">{stats.total}</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Operational Items</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">العمليات التشغيلية</p>
         </div>
 
         <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
@@ -72,7 +75,7 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project, items, onIte
             <span className="text-[10px] font-bold text-slate-400">Target: {project.endDate}</span>
           </div>
           <p className="text-2xl font-black text-slate-900">124 Days</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Remaining Time</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">الوقت المتبقي</p>
         </div>
       </div>
 
@@ -80,12 +83,12 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project, items, onIte
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-black text-slate-900">Milestone Timeline</h3>
+              <h3 className="text-lg font-black text-slate-900">المراحل الزمنية (Milestones)</h3>
               <button 
                 onClick={() => onSwitchTab('workitems')}
                 className="text-xs font-bold text-blue-600 flex items-center gap-1 hover:underline"
               >
-                Full List <ChevronRight size={14} />
+                القائمة الكاملة <ChevronRight size={14} />
               </button>
             </div>
             
@@ -111,9 +114,16 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project, items, onIte
           </div>
 
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-black text-slate-900">Recent Work Items</h3>
-              <button onClick={() => onSwitchTab('workitems')} className="text-xs font-bold text-blue-600 hover:underline">View All</button>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-black text-slate-900">آخر التكليفات والعمليات</h3>
+              {onOpenCreate && (
+                <button 
+                  onClick={onOpenCreate}
+                  className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black flex items-center gap-2 hover:bg-blue-600 transition-all"
+                >
+                  <Plus size={14}/> إضافة تكليف سريع
+                </button>
+              )}
             </div>
             <div className="space-y-4">
               {items.slice(0, 4).map(item => (
@@ -137,7 +147,7 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project, items, onIte
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
             <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-2">
-              <DollarSign className="text-emerald-500" /> Budget Utilization
+              <DollarSign className="text-emerald-500" /> استهلاك الميزانية
             </h3>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
@@ -153,7 +163,7 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project, items, onIte
 
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
             <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-2">
-              <Users className="text-blue-500" /> Project Team
+              <Users className="text-blue-500" /> طاقم المشروع
             </h3>
             <div className="space-y-4">
                {project.teamIds.slice(0, 3).map(uid => (
@@ -171,7 +181,7 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project, items, onIte
                  onClick={onManageTeam}
                  className="w-full py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors mt-2"
                >
-                 Manage Team
+                 إدارة الفريق
                </button>
             </div>
           </div>

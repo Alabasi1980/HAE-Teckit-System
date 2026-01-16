@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Header, Sidebar } from './systems/app-shell';
 import { Dashboard } from './systems/dashboard';
-import { WorkItem, Project, Ticket, User, Notification, View } from './shared/types'; // Updated: Added View to imports
-import { WorkItemList, WorkItemDetail, ApprovalsView, CreateWorkItemModal } from './systems/operations';
+import { WorkItem, Project, Ticket, User, Notification, View, Status } from './shared/types';
+import { WorkItemList, WorkItemDetail, ApprovalsView, CreateWorkItemModal, WorkloadBalancerView } from './systems/operations';
 import { ProjectsListView, ProjectDetail } from './systems/projects';
 import { AssetsView } from './systems/assets';
 import { DocumentsView } from './systems/documents';
@@ -14,16 +14,19 @@ import { SettingsView } from './systems/settings';
 import { InventoryView } from './systems/inventory';
 import { CostControlView } from './systems/finance';
 import { HRDashboard, PayrollView } from './systems/hr';
+import { ComplianceHubView } from './systems/compliance';
+import { OrgStructureView } from './systems/org-structure';
 import { TicketsInboxView, TicketDetailView } from './systems/tickets';
-import CreateTicketView from './systems/tickets/components/CreateTicketView'; // Updated
+import CreateTicketView from './systems/tickets/components/CreateTicketView';
 import { LoginView, MfaVerification, authService } from './systems/auth';
-import { DataProvider } from './context/DataContext';
-import { ToastProvider } from './shared/ui/ToastProvider';
+import { DataProvider, useData } from './context/DataContext';
+import { ToastProvider, useToast } from './shared/ui/ToastProvider';
 import { useEnjazCore } from './shared/hooks/useEnjazCore';
 import { ErrorBoundary } from './shared/ui/ErrorBoundary';
 
-// Fix: Use imported View type from shared/types
 function AppContent() {
+  const data = useData();
+  const { showToast } = useToast();
   const {
     workItems, projects, users, currentUser, notifications, isLoading, error,
     loadAllData, handleStatusUpdate, handleSwitchUser, markAllNotifsRead
@@ -35,7 +38,7 @@ function AppContent() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isCreateTicketOpen, setIsCreateTicketOpen] = useState(false); // New State
+  const [isCreateTicketOpen, setIsCreateTicketOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [mfaUser, setMfaUser] = useState<User | null>(null);
 
@@ -45,6 +48,32 @@ function AppContent() {
       setIsLoggedIn(true);
     }
   }, []);
+
+  const handleCreateWorkItem = async (payload: Partial<WorkItem>) => {
+    try {
+      const newItem = await data.workItems.create(payload);
+      showToast("تم إنشاء المهمة وتعيينها بنجاح.", "success");
+      
+      if (payload.assigneeId) {
+        await data.notifications.create({
+          userId: payload.assigneeId,
+          title: "مهمة جديدة مسندة إليك",
+          message: `تم تكليفك بمهمة: ${payload.title}`,
+          type: 'update',
+          priority: 'normal',
+          category: 'task',
+          relatedItemId: newItem.id,
+          createdAt: new Date().toISOString(),
+          isRead: false
+        });
+      }
+      
+      await loadAllData(true);
+      setIsCreateModalOpen(false);
+    } catch (e) {
+      showToast("فشل إنشاء المهمة، يرجى المحاولة لاحقاً.", "error");
+    }
+  };
 
   if (!isLoggedIn) {
     if (mfaUser) {
@@ -80,15 +109,24 @@ function AppContent() {
             else setIsCreateModalOpen(true);
           }}
           notifications={notifications}
-          onNotificationClick={(n) => console.log(n)}
+          onNotificationClick={(n) => {
+            if(n.relatedItemId) {
+              const item = workItems.find(i => i.id === n.relatedItemId);
+              if(item) setSelectedItem(item);
+            }
+          }}
           onMarkAllRead={markAllNotifsRead}
           unreadCount={notifications.filter(n => !n.isRead).length}
+          projectTitle={selectedProject?.name}
         />
 
         <div className="flex-1 overflow-y-auto p-4 lg:p-8 no-scrollbar">
           <ErrorBoundary name={currentView}>
             {currentView === 'dashboard' && <Dashboard items={workItems} projects={projects} users={users} />}
-            {currentView === 'workitems' && <WorkItemList items={workItems} onItemClick={setSelectedItem} />}
+            {currentView === 'org-structure' && <OrgStructureView />}
+            {currentView === 'workitems' && <WorkItemList items={workItems} onItemClick={setSelectedItem} onOpenCreate={() => setIsCreateModalOpen(true)} />}
+            {currentView === 'workload' && <WorkloadBalancerView users={users} items={workItems} onItemClick={setSelectedItem} />}
+            {currentView === 'compliance' && <ComplianceHubView />}
             {currentView === 'projects' && (
               <ProjectsListView 
                 projects={projects} 
@@ -104,6 +142,7 @@ function AppContent() {
                 onBack={() => setCurrentView('projects')} 
                 onItemClick={setSelectedItem}
                 onNavigate={setCurrentView}
+                onOpenCreate={() => setIsCreateModalOpen(true)}
               />
             )}
             {currentView === 'tickets' && (
@@ -113,7 +152,7 @@ function AppContent() {
               />
             )}
             {currentView === 'approvals' && <ApprovalsView items={workItems} currentUser={currentUser} onItemClick={setSelectedItem} />}
-            {currentView === 'field-ops' && <FieldOps projects={projects} onSubmit={(item) => console.log(item)} />}
+            {currentView === 'field-ops' && <FieldOps projects={projects} onSubmit={handleCreateWorkItem} />}
             {currentView === 'assets' && <AssetsView />}
             {currentView === 'inventory' && <InventoryView />}
             {currentView === 'finance' && <CostControlView />}
@@ -160,7 +199,12 @@ function AppContent() {
           projects={projects} 
           users={users} 
           currentUser={currentUser}
-          onCreate={async (item) => { console.log(item); loadAllData(true); }} 
+          onCreate={handleCreateWorkItem}
+          initialContext={
+            currentView === 'project-detail' && selectedProject 
+              ? { relatedToId: selectedProject.id, relatedToType: 'Project' } 
+              : undefined
+          }
         />
       )}
     </div>

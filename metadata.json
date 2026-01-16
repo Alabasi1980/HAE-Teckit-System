@@ -3,6 +3,7 @@
   "description": "A unified internal operations platform for construction contracting, managing tasks, workflows, approvals, and documents in one core system.",
   "requestFramePermissions": [
     "geolocation",
-    "camera"
+    "camera",
+    "microphone"
   ]
 }

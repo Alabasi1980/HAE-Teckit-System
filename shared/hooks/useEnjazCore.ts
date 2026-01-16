@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useData } from '../../context/DataContext';
-import { WorkItem, Project, User, Notification, Status } from '../types';
+import { WorkItem, Project, User, Notification, Status, Priority, AutomationRule } from '../types';
 
 export const useEnjazCore = () => {
   const data = useData();
@@ -28,7 +28,6 @@ export const useEnjazCore = () => {
     try {
       if (forceRefresh) data.invalidateCache();
       
-      // جلب البيانات الأساسية
       const [items, projs, usrs, currUser] = await Promise.all([
         data.workItems.getAll(forceRefresh),
         data.projects.getAll(forceRefresh),
@@ -58,20 +57,17 @@ export const useEnjazCore = () => {
     }
   }, [data]);
 
-  // التحميل الأولي فقط عند تشغيل التطبيق أو تغيير مزود البيانات
   useEffect(() => {
     loadAllData();
     return () => activeAbortController.current?.abort();
   }, [loadAllData]);
 
-  // التحديث الدوري (Polling) في useEffect منفصل
   useEffect(() => {
     if (!currentUser || isLoading) return;
 
     const pollInterval = setInterval(() => {
       if (pendingUpdatesCount.current > 0) return;
 
-      // تحديث التنبيهات والعمليات في الخلفية دون تفعيل حالة التحميل الرئيسية
       data.notifications.getForUser(currentUser.id).then(notifs => {
           setNotifications(notifs);
       }).catch(() => {});
@@ -87,10 +83,75 @@ export const useEnjazCore = () => {
 
   const handleStatusUpdate = async (id: string, newStatus: Status) => {
     pendingUpdatesCount.current++;
+    const oldItem = workItems.find(i => i.id === id);
+    if (!oldItem) return;
+
     setWorkItems(prev => prev.map(item => item.id === id ? { ...item, status: newStatus } : item));
     
     try {
       await data.workItems.updateStatus(id, newStatus);
+      
+      // Gamification System: Reward Points
+      if (newStatus === Status.DONE && currentUser) {
+         const today = new Date().toISOString().split('T')[0];
+         const isOnTime = today <= oldItem.dueDate;
+         
+         if (isOnTime) {
+            let pointsAwarded = 10; // نقاط أساسية
+            if (oldItem.priority === Priority.CRITICAL) pointsAwarded = 50;
+            else if (oldItem.priority === Priority.HIGH) pointsAwarded = 25;
+            
+            const updatedUser = await data.users.updatePoints(currentUser.id, pointsAwarded);
+            if (updatedUser) {
+               setCurrentUser(updatedUser);
+               // تنبيه بنجاح كسب النقاط
+               await data.notifications.create({
+                  userId: currentUser.id,
+                  title: "تم كسب نقاط خبرة (XP)!",
+                  message: `أحسنت! لقد حصلت على ${pointsAwarded} نقطة لإنجاز المهمة "${oldItem.title}" في موعدها.`,
+                  type: 'info',
+                  priority: 'normal',
+                  category: 'system',
+                  createdAt: new Date().toISOString(),
+                  isRead: false
+               });
+            }
+         }
+      }
+
+      // Automation Trigger
+      if (newStatus === Status.DONE || newStatus === Status.APPROVED) {
+         const rules = await data.automation.getRules();
+         const activeRules = rules.filter(r => r.isEnabled && r.trigger.toStatus === newStatus);
+         
+         for (const rule of activeRules) {
+            if (rule.action.type === 'CREATE_TASK') {
+               const title = rule.action.titleTemplate.replace('{title}', oldItem?.title || '');
+               const description = rule.action.descTemplate.replace('{title}', oldItem?.title || '');
+               
+               await data.workItems.create({
+                  title,
+                  description,
+                  projectId: oldItem?.projectId || 'General',
+                  status: Status.OPEN,
+                  priority: rule.action.priority,
+                  dueDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+                  comments: [{
+                     id: `sys-${Date.now()}`,
+                     text: `تم إنشاء هذه المهمة تلقائياً بواسطة محرك الأتمتة: ${rule.name}`,
+                     userId: 'SYSTEM',
+                     userName: 'محرك الأتمتة',
+                     timestamp: new Date().toISOString(),
+                     isSystem: true
+                  }]
+               });
+            }
+         }
+         if (activeRules.length > 0) {
+            await loadAllData(true);
+         }
+      }
+
     } catch (err: any) {
       setError("فشل تحديث الحالة. جاري إعادة المحاولة...");
       await loadAllData(true);
