@@ -1,4 +1,3 @@
-
 import { WorkItem, Status, Priority } from '../../shared/types';
 
 export interface WorkItemDTO {
@@ -12,7 +11,6 @@ export interface WorkItemDTO {
   assigneeId?: string;
   creatorId?: string;
   createdAt: string;
-  // Added missing fields from API
   updatedAt: string;
   version: number;
   dueDate: string;
@@ -39,13 +37,17 @@ export class WorkItemMapper {
       assigneeId: dto.assigneeId,
       creatorId: dto.creatorId,
       createdAt: dto.createdAt,
-      // Fixed: Mapped version and updatedAt
+      /* 
+        Fix: Mapped version and updatedAt correctly 
+      */
       updatedAt: dto.updatedAt || dto.createdAt,
       version: dto.version || 1,
       dueDate: dto.dueDate,
       tags: dto.tags || [],
       comments: dto.comments || [],
-      // Fix: Corrected property name from approval_chain to approvalChain to match WorkItemDTO interface
+      /* 
+        Fix: Corrected property name from approval_chain to approvalChain 
+      */
       approvalChain: dto.approvalChain || []
     };
   }
@@ -62,10 +64,11 @@ export class WorkItemMapper {
       assigneeId: domain.assigneeId,
       creatorId: domain.creatorId,
       createdAt: domain.createdAt,
-      // Fixed: Mapped version and updatedAt in DTO as well
       updatedAt: domain.updatedAt,
       version: domain.version,
-      // Fix: Corrected property name from due_date to dueDate to match WorkItemDTO interface
+      /* 
+        Fix: Corrected property name from due_date to dueDate to match WorkItemDTO 
+      */
       dueDate: domain.dueDate,
       tags: domain.tags
     };

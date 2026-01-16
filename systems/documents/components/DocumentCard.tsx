@@ -1,12 +1,13 @@
+
 import React from 'react';
-import { Document } from '../../../shared/types';
+import { AppDocument } from '../../../shared/types'; // Updated: Use AppDocument
 import { FileText, Download, Trash2, Sparkles, MapPin, ShieldCheck, FileSpreadsheet, FileCode } from 'lucide-react';
 
 interface DocumentCardProps {
-  doc: Document;
+  doc: AppDocument; // Updated: Use AppDocument
   projectName: string;
   onDelete: (id: string) => void;
-  onAiAnalyze: (doc: Document) => void;
+  onAiAnalyze: (doc: AppDocument) => void; // Updated: Use AppDocument
 }
 
 const DocumentCard: React.FC<DocumentCardProps> = ({ doc, projectName, onDelete, onAiAnalyze }) => {

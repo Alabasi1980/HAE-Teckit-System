@@ -1,3 +1,4 @@
+
 import { Asset, AssetStatus, AssetCategory } from '../../shared/types';
 
 export interface AssetDTO {
@@ -8,6 +9,7 @@ export interface AssetDTO {
   status: string;
   location: string;
   value: number;
+  purchaseDate: string; // Fix: Added missing purchaseDate
   lastMaintenanceDate?: string;
   assignedToUserId?: string;
   assignedToUserName?: string;
@@ -23,6 +25,7 @@ export class AssetMapper {
       status: dto.status as AssetStatus,
       location: dto.location,
       value: dto.value,
+      purchaseDate: dto.purchaseDate, // Fix: Added mapping for purchaseDate
       lastMaintenance: dto.lastMaintenanceDate,
       assignedToUserId: dto.assignedToUserId,
       assignedToUserName: dto.assignedToUserName
@@ -38,6 +41,7 @@ export class AssetMapper {
       status: domain.status,
       location: domain.location,
       value: domain.value,
+      purchaseDate: domain.purchaseDate, // Fix: Added mapping for purchaseDate
       lastMaintenanceDate: domain.lastMaintenance,
       assignedToUserId: domain.assignedToUserId,
       assignedToUserName: domain.assignedToUserName

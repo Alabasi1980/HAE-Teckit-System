@@ -1,4 +1,5 @@
-import { Article } from '../../shared/types';
+
+import { AppArticle } from '../../shared/types'; // Updated: Use AppArticle
 
 export interface ArticleDTO {
   articleId: string;
@@ -11,7 +12,7 @@ export interface ArticleDTO {
 }
 
 export class ArticleMapper {
-  static toDomain(dto: ArticleDTO): Article {
+  static toDomain(dto: ArticleDTO): AppArticle { // Updated: Use AppArticle
     return {
       id: dto.articleId,
       title: dto.title,
@@ -23,7 +24,7 @@ export class ArticleMapper {
     };
   }
 
-  static toDTO(domain: Partial<Article>): Partial<ArticleDTO> {
+  static toDTO(domain: Partial<AppArticle>): Partial<ArticleDTO> { // Updated: Use AppArticle
     return {
       articleId: domain.id,
       title: domain.title,

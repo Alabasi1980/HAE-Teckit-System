@@ -1,5 +1,5 @@
 
-import { Priority, Project, Status, User, WorkItem, WorkItemType, Article, Asset, AssetCategory, AssetStatus, ProjectStatus, ProjectHealth } from "./types";
+import { Priority, Project, Status, User, WorkItem, WorkItemType, AppArticle, Asset, AssetCategory, AssetStatus, ProjectStatus, ProjectHealth } from "./types";
 
 export const MOCK_PROJECTS: Project[] = [
   { 
@@ -144,7 +144,10 @@ export const MOCK_WORK_ITEMS: WorkItem[] = [
   }
 ];
 
-export const MOCK_ARTICLES: Article[] = [
+/* 
+  Fix: Renamed from Article to AppArticle to match the exported member from shared/types.ts 
+*/
+export const MOCK_ARTICLES: AppArticle[] = [
   {
     id: 'KB-001',
     title: 'Site Safety Protocol: Working at Heights',

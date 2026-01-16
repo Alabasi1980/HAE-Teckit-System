@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Document, Project } from '../../../shared/types';
+import { AppDocument, Project } from '../../../shared/types'; // Updated: Use AppDocument
 import { useData } from '../../../context/DataContext';
 import { Search, Filter, FolderOpen, Grid, List, Sparkles, X, Loader2, Database, ShieldCheck, FileText, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -12,7 +12,7 @@ interface DocumentsViewProps {
 
 const DocumentsView: React.FC<DocumentsViewProps> = ({ projects }) => {
   const data = useData();
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<AppDocument[]>([]); // Updated: Use AppDocument
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('All');
@@ -40,7 +40,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({ projects }) => {
     }
   };
 
-  const handleAiSummarize = async (doc: Document) => {
+  const handleAiSummarize = async (doc: AppDocument) => { // Updated: Use AppDocument
     setIsAiLoading(true);
     setAiSummary({ title: doc.title, content: '' });
     

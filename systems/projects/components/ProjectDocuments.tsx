@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Project, Document } from '../../../shared/types';
+import { Project, AppDocument } from '../../../shared/types'; // Updated: Use AppDocument
 import { useData } from '../../../context/DataContext';
 import { MapPin, FileText, Upload, Trash2, File, Download } from 'lucide-react';
 
@@ -9,9 +10,9 @@ interface ProjectDocumentsProps {
 
 const ProjectDocuments: React.FC<ProjectDocumentsProps> = ({ project }) => {
   const data = useData();
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<AppDocument[]>([]); // Updated: Use AppDocument
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadCategory, setUploadCategory] = useState<Document['category']>('Other');
+  const [uploadCategory, setUploadCategory] = useState<AppDocument['category']>('Other'); // Updated: Use AppDocument
 
   useEffect(() => {
     loadDocuments();

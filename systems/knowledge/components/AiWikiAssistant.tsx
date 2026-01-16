@@ -1,11 +1,12 @@
+
 import React, { useState } from 'react';
-import { Article } from '../../../shared/types';
+import { AppArticle } from '../../../shared/types'; // Updated: Use AppArticle
 import { useData } from '../../../context/DataContext';
 import { Sparkles, Send, X, Bot, BookOpen, AlertCircle, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface AiWikiAssistantProps {
-  articles: Article[];
+  articles: AppArticle[]; // Updated: Use AppArticle
 }
 
 const AiWikiAssistant: React.FC<AiWikiAssistantProps> = ({ articles }) => {

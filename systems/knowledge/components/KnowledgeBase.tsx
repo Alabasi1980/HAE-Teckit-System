@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { Article } from '../../../shared/types';
+import { AppArticle } from '../../../shared/types'; // Updated: Use AppArticle
 import { useData } from '../../../context/DataContext';
 import { Search, BookOpen, ChevronRight, X, Hash, Clock, Share2, Bookmark, Sparkles, ShieldCheck, HeartPulse, Hammer, Monitor, Info, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -7,10 +8,10 @@ import AiWikiAssistant from './AiWikiAssistant';
 
 const KnowledgeBase: React.FC = () => {
   const data = useData();
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [articles, setArticles] = useState<AppArticle[]>([]); // Updated: Use AppArticle
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [readingArticle, setReadingArticle] = useState<Article | null>(null);
+  const [readingArticle, setReadingArticle] = useState<AppArticle | null>(null); // Updated: Use AppArticle
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

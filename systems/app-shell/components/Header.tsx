@@ -1,8 +1,7 @@
+
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Menu, Plus, Bell, Settings, Search, Command, CheckCheck, AlertOctagon, AtSign, Zap, HelpCircle, ChevronLeft } from 'lucide-react';
-import { Notification, NotificationPriority } from '../../../shared/types';
-
-type View = 'dashboard' | 'ceo-board' | 'workitems' | 'approvals' | 'projects' | 'field-ops' | 'project-detail' | 'documents' | 'knowledge' | 'assets' | 'inventory' | 'finance' | 'procurement' | 'hr' | 'payroll' | 'settings' | 'profile';
+import { Notification, NotificationPriority, View } from '../../../shared/types'; // Updated: Import View
 
 interface HeaderProps {
   currentView: View;

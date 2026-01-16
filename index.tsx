@@ -1,5 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+/* 
+  Fix: App is now correctly imported as a default export 
+*/
 import App from './App';
 
 const rootElement = document.getElementById('root');

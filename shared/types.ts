@@ -1,32 +1,131 @@
 
-export enum ProjectStatus {
-  PLANNING = 'Planning',
-  ACTIVE = 'Active',
-  ON_HOLD = 'On Hold',
-  COMPLETED = 'Completed',
-  DELAYED = 'Delayed'
+export enum TicketType {
+  INCIDENT = 'Incident',
+  SERVICE_REQUEST = 'Service Request',
+  PROBLEM = 'Problem',
+  CHANGE_REQUEST = 'Change Request',
+  COMPLAINT = 'Complaint',
+  INQUIRY = 'Inquiry'
 }
 
-export enum ProjectHealth {
-  GOOD = 'Good',
-  AT_RISK = 'At Risk',
-  CRITICAL = 'Critical'
+export enum TicketStatus {
+  NEW = 'New',
+  OPEN = 'Open',
+  IN_PROGRESS = 'In Progress',
+  WAITING_CUSTOMER = 'Waiting on Customer',
+  RESOLVED = 'Resolved',
+  CLOSED = 'Closed',
+  CANCELED = 'Canceled'
 }
 
-export enum AssetCategory {
-  HEAVY_EQUIPMENT = 'Heavy Equipment',
-  VEHICLE = 'Vehicle',
-  IT = 'IT & Digital',
-  TOOLS = 'Tools',
-  OTHER = 'Other'
+export enum TicketPriority {
+  P1_CRITICAL = 'P1 - Critical',
+  P2_HIGH = 'P2 - High',
+  P3_MEDIUM = 'P3 - Medium',
+  P4_LOW = 'P4 - Low'
 }
 
-export enum AssetStatus {
-  AVAILABLE = 'Available',
-  IN_USE = 'In Use',
-  MAINTENANCE = 'Maintenance',
-  LOST = 'Lost',
-  RETIRED = 'Retired'
+export enum CommentVisibility {
+  PUBLIC = 'Public Reply',
+  INTERNAL = 'Internal Note'
+}
+
+export interface TicketComment {
+  id: string;
+  ticketId: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string;
+  body: string;
+  visibility: CommentVisibility;
+  attachments?: string[];
+  createdAt: string;
+}
+
+export interface TicketActivity {
+  id: string;
+  ticketId: string;
+  actorName: string;
+  action: string;
+  details?: string;
+  createdAt: string;
+}
+
+export interface Ticket {
+  id: string;
+  key: string;
+  title: string;
+  description: string;
+  type: TicketType;
+  priority: TicketPriority;
+  status: TicketStatus;
+  requesterId: string;
+  requesterName: string;
+  assigneeId?: string;
+  assigneeName?: string;
+  teamId?: string;
+  projectId?: string;
+  sourceRefId?: string;
+  firstResponseDueAt: string;
+  resolutionDueAt: string;
+  createdAt: string;
+  updatedAt: string;
+  tags: string[];
+}
+
+/* 
+  Fix: Added missing types and enums required by other modules 
+*/
+
+export enum Priority {
+  CRITICAL = 'Critical',
+  HIGH = 'High',
+  MEDIUM = 'Medium',
+  LOW = 'Low'
+}
+
+export enum Status {
+  OPEN = 'Open',
+  IN_PROGRESS = 'In Progress',
+  PENDING_APPROVAL = 'Pending Approval',
+  APPROVED = 'Approved',
+  REJECTED = 'Rejected',
+  DONE = 'Done'
+}
+
+export enum WorkItemType {
+  TASK = 'Task',
+  APPROVAL = 'Approval Case',
+  INCIDENT = 'Incident',
+  OBSERVATION = 'Safety Observation',
+  SERVICE_REQUEST = 'Service Request'
+}
+
+export interface User {
+  id: string;
+  name: string;
+  role: string;
+  avatar: string;
+  email?: string;
+  phone?: string;
+  department?: string;
+  joinDate?: string;
+}
+
+export interface Subtask {
+  id: string;
+  title: string;
+  isCompleted: boolean;
+}
+
+export interface Comment {
+  id: string;
+  text: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  timestamp: string;
+  isSystem?: boolean;
 }
 
 export enum ApprovalDecision {
@@ -35,188 +134,58 @@ export enum ApprovalDecision {
   REJECTED = 'Rejected'
 }
 
-export interface Permit {
+export interface ApprovalStep {
   id: string;
-  projectId: string;
-  authority: string;
+  approverId: string;
+  approverName: string;
+  role: string;
+  decision: ApprovalDecision;
+  comments?: string;
+  decisionDate?: string;
+}
+
+export interface WorkItem {
+  id: string;
   title: string;
-  status: 'Active' | 'Expired' | 'Pending' | 'Renewal';
-  issueDate: string;
-  expiryDate: string;
-  documentUrl?: string;
-}
-
-export interface LetterOfGuarantee {
-  id: string;
-  projectId: string;
-  bankName: string;
-  type: 'Bid Bond' | 'Performance Bond' | 'Advance Payment' | 'Retention';
-  amount: number;
-  issueDate: string;
-  expiryDate: string;
-  status: 'Active' | 'Released' | 'Extended' | 'Claimed';
-}
-
-/* Added for Blueprint Support */
-export interface TaskPin {
-  id: string;
-  workItemId: string;
-  x: number; // Percent from left
-  y: number; // Percent from top
+  description: string;
   type: WorkItemType;
   priority: Priority;
+  status: Status;
+  projectId: string;
+  assigneeId?: string;
+  creatorId?: string;
+  createdAt: string;
+  updatedAt: string;
+  version: number;
+  dueDate: string;
+  tags?: string[];
+  comments: Comment[];
+  subtasks?: Subtask[];
+  approvalChain?: ApprovalStep[];
+  location?: { lat: number; lng: number };
+  attachments?: string[];
+  assetId?: string;
 }
 
-export interface Blueprint {
-  id: string;
-  projectId: string;
-  title: string;
-  imageUrl: string;
-  version: string;
-  pins: TaskPin[];
+export enum ProjectStatus {
+  PLANNING = 'Planning',
+  ACTIVE = 'Active',
+  DELAYED = 'Delayed',
+  COMPLETED = 'Completed'
+}
+
+export enum ProjectHealth {
+  GOOD = 'Good',
+  AT_RISK = 'At Risk',
+  CRITICAL = 'Critical'
 }
 
 export interface Milestone {
   id: string;
   title: string;
   dueDate: string;
-  status: 'Pending' | 'In Progress' | 'Completed';
+  status: string;
   progress: number;
-}
-
-export interface Client {
-  id: string;
-  name: string;
-  company?: string;
-  email: string;
-  phone: string;
-  avatar: string;
-  linkedProjectIds: string[];
-}
-
-export enum VendorCategory {
-  AGREEMENT = 'Agreement', 
-  CREDIT = 'Credit',      
-  CASH = 'Cash'          
-}
-
-export interface Vendor {
-  id: string;
-  name: string;
-  category: VendorCategory;
-  trade: string; 
-  contactPerson: string;
-  phone: string;
-  email: string;
-  rating: number;
-  status: 'Active' | 'Blacklisted' | 'Inactive';
-  paymentTerms?: string;
-}
-
-export interface PurchaseOrder {
-  id: string;
-  poNumber: string;
-  projectId: string;
-  projectName: string;
-  vendorId: string;
-  vendorName: string;
-  vendorCategory: VendorCategory;
-  issueDate: string;
-  deliveryDate?: string;
-  items: { description: string; quantity: number; unit: string; unitPrice: number; total: number }[];
-  subtotal: number;
-  tax: number;
-  grandTotal: number;
-  status: 'Draft' | 'Sent' | 'Partially Received' | 'Received' | 'Cancelled';
-  paymentStatus: 'Pending' | 'Paid' | 'Partial' | 'CheckIssued';
-}
-
-export interface PettyCashRecord {
-  id: string;
-  projectId: string;
-  accountantId: string;
-  vendorName: string;
-  amount: number;
-  description: string;
-  receiptUrl?: string;
-  date: string;
-  category: string;
-}
-
-export interface Subcontractor {
-  id: string;
-  name: string;
-  trade: string; 
-  contactName: string;
-  phone: string;
-  performanceScore: number;
-  totalContractValue: number;
-  paidAmount: number;
-}
-
-export interface PaymentCertificate {
-  id: string;
-  projectId: string;
-  subcontractorId: string;
-  subcontractorName: string;
-  period: string;
-  claimedPercentage: number;
-  approvedPercentage: number;
-  amount: number;
-  status: 'Draft' | 'Submitted' | 'Verified' | 'Approved' | 'Paid';
-  createdAt: string;
-}
-
-export interface Ncr {
-  id: string;
-  projectId: string;
-  subcontractorId: string;
-  title: string;
-  description: string;
-  severity: 'Minor' | 'Major' | 'Critical';
-  status: 'Open' | 'Resolved' | 'Closed';
-  issuedBy: string;
-  createdAt: string;
-  resolvedAt?: string;
-}
-
-export interface Rfi {
-  id: string;
-  projectId: string;
-  rfiNo: string;
-  subject: string;
-  description: string;
-  location: string;
-  drawingRef?: string;
-  status: 'Pending' | 'Answered' | 'Closed' | 'Void';
-  response?: string;
-  respondedBy?: string;
-  respondedAt?: string;
-  createdAt: string;
-}
-
-export interface MaterialSubmittal {
-  id: string;
-  projectId: string;
-  submittalNo: string;
-  materialName: string;
-  manufacturer: string;
-  specificationRef?: string;
-  status: 'Pending' | 'Approved' | 'ApprovedAsNoted' | 'Rejected';
-  consultantComment?: string;
-  createdAt: string;
-}
-
-export interface ChangeOrder {
-  id: string;
-  projectId: string;
-  title: string;
-  description: string;
-  impactOnBudget: number;
-  impactOnDuration: number; 
-  status: 'Draft' | 'Sent' | 'Approved' | 'Rejected';
-  requestedBy: 'Client' | 'Contractor';
-  createdAt: string;
 }
 
 export interface Project {
@@ -232,56 +201,125 @@ export interface Project {
   endDate: string;
   managerId: string;
   teamIds: string[];
-  clientId?: string; 
-  consultantId?: string;
-  subcontractorIds?: string[];
-  milestones?: Milestone[];
   version: number;
   updatedAt: string;
+  milestones?: Milestone[];
+  clientId?: string;
 }
 
-export enum WorkItemType {
-  TASK = 'Task',
-  TICKET = 'Ticket',
-  SERVICE_REQUEST = 'Service Request',
-  INCIDENT = 'Incident',
-  APPROVAL = 'Approval Case',
-  CUSTODY = 'Custody',
-  OBSERVATION = 'Safety Observation',
-  COMPLAINT = 'Complaint',
-  SUGGESTION = 'Suggestion',
-  MATERIAL_REQUEST = 'Material Request'
+export enum AssetStatus {
+  AVAILABLE = 'Available',
+  IN_USE = 'In Use',
+  MAINTENANCE = 'Maintenance',
+  LOST = 'Lost',
+  RETIRED = 'Retired'
 }
 
-export enum Priority {
-  HIGH = 'High',
-  MEDIUM = 'Medium',
-  LOW = 'Low',
-  CRITICAL = 'Critical'
+export enum AssetCategory {
+  HEAVY_EQUIPMENT = 'Heavy Equipment',
+  VEHICLE = 'Vehicle',
+  TOOLS = 'Tools',
+  IT = 'IT',
+  OTHER = 'Other'
 }
 
-export enum Status {
-  OPEN = 'Open',
-  IN_PROGRESS = 'In Progress',
-  PENDING_APPROVAL = 'Pending Approval',
-  APPROVED = 'Approved',
-  REJECTED = 'Rejected',
-  DONE = 'Done'
-}
-
-export interface Contract {
+export interface Asset {
   id: string;
-  contractNumber: string;
-  title: string;
-  vendorId: string;
-  vendorName: string;
-  projectId: string;
+  name: string;
+  serialNumber: string;
+  category: AssetCategory;
+  status: AssetStatus;
+  location: string;
+  purchaseDate: string;
   value: number;
-  startDate: string;
-  endDate: string;
-  status: 'Active' | 'Expired' | 'Terminated';
-  type: 'Subcontract' | 'Service' | 'Supply';
+  lastMaintenance?: string;
+  assignedToUserId?: string;
+  assignedToUserName?: string;
 }
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'info' | 'alert' | 'update';
+  priority: NotificationPriority;
+  category: NotificationCategory;
+  isRead: boolean;
+  createdAt: string;
+  relatedItemId?: string;
+  aiSummary?: string;
+}
+
+export type NotificationPriority = 'low' | 'normal' | 'high' | 'critical';
+export type NotificationCategory = 'system' | 'mention' | 'task' | 'approval';
+
+/**
+ * Fix: Renamed Document to AppDocument to avoid collision with DOM Document
+ */
+export interface AppDocument {
+  id: string;
+  title: string;
+  projectId: string;
+  url: string;
+  category: 'Blueprint' | 'Contract' | 'Permit' | 'Report' | 'Invoice' | 'Technical' | 'Other';
+  size: string;
+  type: string;
+  uploaderId: string;
+  uploaderName: string;
+  uploadedAt: string;
+}
+
+/**
+ * Fix: Renamed Article to AppArticle to avoid collision with global names
+ */
+export interface AppArticle {
+  id: string;
+  title: string;
+  category: string;
+  authorName: string;
+  lastUpdated: string;
+  tags: string[];
+  content: string;
+}
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  description: string;
+  isEnabled: boolean;
+}
+
+export interface NotificationPreferences {
+  dndEnabled: boolean;
+  channels: {
+    critical: { email: boolean; inApp: boolean; push: boolean };
+    mentions: { email: boolean; inApp: boolean; push: boolean };
+    updates: { email: boolean; inApp: boolean; push: boolean };
+  };
+}
+
+export interface Material {
+  id: string;
+  name: string;
+  category: string;
+  unit: string;
+  currentStock: number;
+  minThreshold: number;
+  unitPrice: number;
+}
+
+export interface StockMovement {
+  id: string;
+  materialId: string;
+  type: 'Inbound' | 'Outbound';
+  quantity: number;
+  note: string;
+  performedBy: string;
+  createdAt: string;
+}
+
+export type StockMovementType = 'Inbound' | 'Outbound';
 
 export interface DailyLog {
   id: string;
@@ -290,55 +328,25 @@ export interface DailyLog {
   weatherStatus?: string;
   manpowerCount: number;
   laborDetails?: { trade: string; count: number; hours: number; estimatedRate?: number }[];
-  equipmentDetails?: { assetId: string; assetName: string; operatingHours: number; fuelConsumed?: number; hourlyRate?: number }[];
+  equipmentDetails?: { assetName: string; assetId: string; operatingHours: number; fuelConsumed: number; hourlyRate?: number }[];
   consumedMaterials?: { materialId: string; name: string; quantity: number; unit: string; unitCost?: number }[];
-  content: string; 
-  stats: {
-    tasksCompleted: number;
-    incidentsReported: number;
-    materialsRequested: number;
-  };
+  content: string;
+  stats?: { tasksCompleted: number; incidentsReported: number; materialsRequested: number };
   createdBy: string;
   isApproved: boolean;
-}
-
-export interface Material {
-  id: string;
-  name: string;
-  unit: string; 
-  currentStock: number;
-  minThreshold: number;
-  category: string;
-  unitPrice: number;
-  location: string;
-}
-
-export enum StockMovementType {
-  INBOUND = 'Inbound',
-  OUTBOUND = 'Outbound'
-}
-
-export interface StockMovement {
-  id: string;
-  materialId: string;
-  quantity: number;
-  type: 'Inbound' | 'Outbound';
-  note: string;
-  createdAt: string;
-  performedBy: string;
 }
 
 export interface Employee {
   id: string;
   name: string;
   role: string;
-  department: string;
-  baseSalary: number;
-  hourlyRate: number;
-  joinDate: string;
   avatar: string;
+  department: string;
+  joinDate: string;
   status: 'Active' | 'On Leave' | 'Terminated';
   currentProject?: string;
+  email: string;
+  phone: string;
 }
 
 export interface PayrollRecord {
@@ -356,124 +364,165 @@ export interface PayrollRecord {
   status: 'Draft' | 'Approved' | 'Paid';
 }
 
-export interface User {
+export interface Vendor {
   id: string;
   name: string;
-  role: string;
-  avatar: string;
-  email?: string;
-  phone?: string;
-  joinDate?: string;
-  department?: string;
+  category: VendorCategory;
+  trade: string;
+  rating: number;
+  contactEmail: string;
+  contactPhone: string;
 }
 
-export interface Comment {
-  id: string;
-  userId: string;
-  userName: string;
-  userAvatar?: string;
-  text: string;
-  timestamp: string;
-  isSystem?: boolean;
+export enum VendorCategory {
+  AGREEMENT = 'Strategy Agreement',
+  RETAIL = 'Retail / Spot'
 }
 
-export type NotificationPriority = 'critical' | 'high' | 'normal' | 'low';
-export type NotificationCategory = 'system' | 'task' | 'approval' | 'security' | 'mention';
-
-export interface Notification {
+export interface PurchaseOrder {
   id: string;
-  userId: string;
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  priority: NotificationPriority;
-  category: NotificationCategory;
-  isRead: boolean;
+  poNumber: string;
+  vendorId: string;
+  vendorName: string;
+  vendorCategory: VendorCategory;
+  projectId: string;
+  projectName: string;
+  grandTotal: number;
+  status: 'Draft' | 'Sent' | 'Received' | 'Cancelled';
   createdAt: string;
-  relatedItemId?: string;
-  aiSummary?: string;
 }
 
-export interface Subtask {
+export interface Contract {
   id: string;
-  title: string;
-  isCompleted: boolean;
+  contractNumber: string;
+  vendorId: string;
+  vendorName: string;
+  amount: number;
+  startDate: string;
+  endDate: string;
+  status: string;
+  projectId?: string;
 }
 
-export interface WorkItem {
+export interface PettyCashRecord {
   id: string;
+  projectId: string;
+  amount: number;
+  date: string;
+  description: string;
+  vendorName: string;
+  receiptUrl?: string;
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  company: string;
+  avatar?: string;
+  email: string;
+}
+
+export interface ChangeOrder {
+  id: string;
+  projectId: string;
   title: string;
   description: string;
-  type: WorkItemType;
-  priority: Priority;
-  status: Status;
-  projectId: string;
-  assigneeId?: string;
-  creatorId?: string;
+  impactOnBudget: number;
+  impactOnTimeline: number;
+  status: 'Sent' | 'Approved' | 'Rejected';
   createdAt: string;
-  updatedAt: string;
-  dueDate: string;
-  version: number;
-  comments: Comment[];
-  tags: string[];
-  approvalChain?: { id: string; approverId: string; approverName: string; role: string; decision: 'Pending' | 'Approved' | 'Rejected'; decisionDate?: string; comments?: string }[];
-  location?: { lat: number; lng: number };
-  attachments?: string[];
-  subtasks?: Subtask[];
-  assetId?: string;
 }
 
-export interface Asset {
+export interface Rfi {
   id: string;
-  name: string;
-  serialNumber: string;
-  category: AssetCategory;
-  status: AssetStatus;
+  rfiNo: string;
+  projectId: string;
+  subject: string;
+  description: string;
+  status: 'Pending' | 'Closed';
+  createdAt: string;
   location: string;
-  purchaseDate?: string;
-  value: number;
-  lastMaintenance?: string;
-  assignedToUserId?: string;
-  assignedToUserName?: string;
+  drawingRef?: string;
 }
 
-export interface Document {
+export interface MaterialSubmittal {
   id: string;
-  title: string;
+  submittalNo: string;
+  materialName: string;
+  manufacturer: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
   projectId: string;
-  url: string;
-  category: string;
-  size: string;
-  type: string;
-  uploaderId: string;
-  uploaderName: string;
-  uploadedAt: string;
 }
 
-export interface AutomationRule {
+export interface Subcontractor {
   id: string;
   name: string;
-  description: string;
-  isEnabled: boolean;
-  trigger: string;
+  trade: string;
+  performanceScore: number;
+  totalContractValue: number;
+  paidAmount: number;
 }
 
-export interface NotificationPreferences {
-  userId: string;
-  dndEnabled: boolean;
-  channels: {
-    critical: { email: boolean; inApp: boolean; push: boolean };
-    mentions: { email: boolean; inApp: boolean; push: boolean };
-    updates: { email: boolean; inApp: boolean; push: boolean };
-  };
+export interface PaymentCertificate {
+  id: string;
+  subcontractorId: string;
+  subcontractorName: string;
+  period: string;
+  claimedPercentage: number;
+  approvedPercentage: number;
+  status: 'Draft' | 'Sent' | 'Approved';
+  projectId: string;
 }
 
-export interface Article {
+export interface Ncr {
   id: string;
   title: string;
-  category: string;
-  authorName: string;
-  lastUpdated: string;
-  tags: string[];
-  content: string;
+  description: string;
+  subcontractorId: string;
+  severity: 'Minor' | 'Major' | 'Critical';
+  status: 'Open' | 'Closed';
+  issuedBy: string;
+  createdAt: string;
+  projectId: string;
 }
+
+export interface Permit {
+  id: string;
+  title: string;
+  authority: string;
+  expiryDate: string;
+  status: 'Active' | 'Renewal' | 'Expired';
+  projectId: string;
+}
+
+export interface LetterOfGuarantee {
+  id: string;
+  bankName: string;
+  type: string;
+  amount: number;
+  expiryDate: string;
+  status: 'Active' | 'Expired';
+  projectId: string;
+}
+
+export interface Blueprint {
+  id: string;
+  title: string;
+  imageUrl: string;
+  version: string;
+  pins: TaskPin[];
+  projectId: string;
+}
+
+export interface TaskPin {
+  id: string;
+  workItemId: string;
+  x: number;
+  y: number;
+  priority: Priority;
+}
+
+/**
+ * Fix: Standardized View type exported for application-wide consistency
+ */
+export type View = 'dashboard' | 'ceo-board' | 'workitems' | 'tickets' | 'approvals' | 'projects' | 'field-ops' | 'project-detail' | 'documents' | 'knowledge' | 'assets' | 'inventory' | 'finance' | 'procurement' | 'hr' | 'payroll' | 'settings' | 'profile';
